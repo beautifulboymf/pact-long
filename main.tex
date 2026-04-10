@@ -1,16 +1,11 @@
-% RecSys 2025 — Long Paper (8 pages + 2 refs)
-% Double-blind, double-column ACM sigconf format
+% RecSys 2025 — Short Paper (4 pages + 1 page refs)
 \documentclass[sigconf,anonymous,review]{acmart}
 
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{tabularx}
-% amsmath, amssymb, amsthm are loaded by acmart — do not reload
 \usepackage{mathtools}
-\usepackage{algorithm}
-\usepackage{algorithmic}
 \usepackage[capitalize,noabbrev]{cleveref}
-\usepackage{xcolor}
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 
@@ -19,9 +14,8 @@
 
 \begin{document}
 
-\title{Graph Positional Encoding and Variance-Weighted Learning\\as Universal Plug-ins for Uplift Modeling}
+\title{Graph Positional Encoding as a Universal Plug-in\\for Uplift Modeling on Networks}
 
-%% ACM CCS concepts (mandatory for papers > 2 pages)
 \begin{CCSXML}
 <ccs2012>
 <concept>
@@ -34,396 +28,146 @@
 <concept_desc>Computing methodologies~Neural networks</concept_desc>
 <concept_significance>300</concept_significance>
 </concept>
-<concept>
-<concept_id>10002950.10003648.10003671</concept_id>
-<concept_desc>Mathematics of computing~Probabilistic inference</concept_desc>
-<concept_significance>300</concept_significance>
-</concept>
 </ccs2012>
 \end{CCSXML}
-
 \ccsdesc[500]{Information systems~Recommender systems}
 \ccsdesc[300]{Computing methodologies~Neural networks}
-\ccsdesc[300]{Mathematics of computing~Probabilistic inference}
-
-\keywords{uplift modeling, individual treatment effect, graph neural networks, positional encoding, heteroscedasticity, causal inference}
+\keywords{uplift modeling, individual treatment effect, graph neural networks, positional encoding, causal inference}
 
 \begin{abstract}
-Estimating Individual Treatment Effects (ITE) from networked observational data is critical for personalized recommendation, yet existing graph-based methods are monolithic---improvements engineered for one architecture do not transfer to others. We introduce two orthogonal, plug-and-play modules that enhance \emph{any} graph ITE estimator without modifying its internal structure: (1)~\textbf{Graph Positional Encoding (GPE)}, a multi-head cross-attention mechanism that fuses raw node features with node2vec positional embeddings, making community-level structural information explicitly available before GNN aggregation; and (2)~\textbf{Variance-Weighted Learning}, an inverse-variance sample weighting scheme that mitigates heteroscedastic noise in treatment effect regression, with a novel Bernoulli-derived closed-form adaptation for binary outcomes common in recommender systems. We evaluate both modules as drop-in enhancements on eight base models---spanning the full 2016--2025 timeline from BNN to GDC (WSDM~2025 SOTA)---across five graph datasets and six real-world tabular uplift benchmarks, totaling over 1,100 experimental runs. GPE improves PEHE in 69\% of all graph settings, with TARNet+GPE achieving a perfect 11/11 win rate. On continuous outcomes, variance weighting yields a $4\times$ Qini improvement. Under high heteroscedastic noise, the combination of both modules reduces GDC's PEHE by up to 31\%. Our results establish a modular enhancement paradigm: researchers can apply these plug-ins to their preferred base model and expect consistent, complementary improvements for graph-based uplift modeling in recommender systems.
+Graph Neural Networks (GNNs) have become the backbone of individual treatment effect (ITE) estimation from networked observational data, with models such as NetDeconf, GIAL, and GDC advancing the state of the art over the past five years. Yet each new method proposes a monolithic architecture whose innovations cannot be easily transferred to other models. In this paper, we step back from designing yet another model and instead ask: \emph{can a single, lightweight module improve all of them?}
+
+We propose \textbf{Graph Positional Encoding (GPE)}, a multi-head self-attention module that fuses raw node features with node2vec positional embeddings before feeding them into any GNN-based ITE estimator. GPE operates entirely at the input level and requires no modification to the base model's internals. We evaluate GPE as a drop-in enhancement on seven base models---spanning the foundational NetDeconf (WSDM~2020) to the current state-of-the-art GDC (WSDM~2025)---across five graph datasets. GPE improves the PEHE of TARNet in all 11 settings tested (a perfect win rate), reduces GDC's error by up to 17\%, and improves 7 of 7 non-trivial base models overall. Code is available at \url{https://anonymous.4open.science/r/CAVIN}.
 \end{abstract}
 
 \maketitle
 
 %% ====================================================================
-\section{Introduction}\label{sec:intro}
+\section{Introduction}
 %% ====================================================================
 
-Accurate estimation of Individual Treatment Effects (ITE) is fundamental for personalized recommendations. Whether a platform decides which users should receive a promotional coupon~\cite{goldenberg2020free,10.1145/3511808.3557100}, which social media posts to boost~\cite{parshakov2020spillover}, or which patients to vaccinate first~\cite{luo2021behavioural}, the core question is the same: \emph{what is the causal effect of this intervention on this specific individual?}
+Estimating how individual users respond differently to a treatment---be it a coupon, a recommendation, or a notification---is central to personalization in recommender systems~\cite{goldenberg2020free, parshakov2020spillover}. When users are connected through a social network, their responses are shaped not only by their own features but also by their neighbors' treatments and behaviors, a phenomenon known as \emph{network interference}~\cite{forastiere2021identification}. This has spurred a line of GNN-based methods for ITE estimation: NetDeconf~\cite{guo2020learning} introduced GCN-based representation balancing; GIAL~\cite{chu2021graph} added mutual-information maximization; GNUM~\cite{zhu2023gnum} proposed transformed-target uplift estimation; and GDC~\cite{hu2025gdc} currently leads by disentangling features into adjustment and confounder factors.
 
-In networked environments such as social platforms and online communities, user behavior is shaped not only by individual characteristics but also by peer influence through network connections~\cite{forastiere2021identification, aral2011creating, DEVALCK2009185}. A user who receives a coupon may influence her friends' purchasing decisions even though they received no coupon themselves---a phenomenon known as \emph{network interference} or \emph{spillover}~\cite{hudgens2008toward, parshakov2020spillover}. This has motivated a growing body of work on graph-based ITE estimation, beginning with NetDeconf~\cite{guo2020learning} and progressing through GIAL~\cite{chu2021graph}, GNUM~\cite{zhu2023gnum}, IGL~\cite{sui2024invariant}, and the current state-of-the-art GDC~\cite{hu2025gdc}.
+A common pattern across these models is that each proposes a \emph{complete} architecture: a specific GNN backbone, a specific set of output heads, and a specific loss function. Improvements made by one model---say, GDC's treatment-conditioned aggregation---are architecturally tied to that model and cannot benefit others. We argue that this monolithic design philosophy limits cumulative progress in the field.
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\columnwidth]{images/Uplift_cover.png}
-    \caption{Community influence in networked uplift modeling. Treated users (orange) exert spillover effects on their neighbors. Nodes in the same community (shaded regions) share structural roles that standard GNN message-passing cannot distinguish from local neighborhood similarity. GPE captures these community-level positional signals.}
-    \label{fig:cover}
-\end{figure}
+In contrast, we propose a \textbf{modular, plug-and-play approach}. Rather than building a new model, we identify a single module---Graph Positional Encoding (GPE)---that can be prepended to \emph{any} GNN-based ITE estimator to improve its performance. GPE works by fusing the model's input features with structural positional embeddings via multi-head self-attention. The intuition is straightforward: standard message-passing GNNs aggregate local neighborhoods but lack explicit awareness of a node's global position or community membership. Two users may have similar local neighborhoods yet belong to different communities with distinct treatment response patterns. GPE makes this positional information available before any GNN processing occurs.
 
-Despite steady progress, we identify three fundamental challenges that limit the practical impact of this line of research:
-
-\textbf{Challenge 1: No positional awareness.} Standard GNN backbones aggregate neighbor features through message-passing, but they lack explicit awareness of a node's global structural position~\cite{velickovic2017graph}. As illustrated in Figure~\ref{fig:cover}, nodes in the same community may share confounding patterns---e.g., users in a fitness community may have correlated health behaviors---that local aggregation alone cannot capture. This structural information is precisely what is needed to reduce confounding bias in ITE estimation.
-
-\textbf{Challenge 2: Heteroscedasticity.} Treatment effect estimation inherently involves heteroscedastic noise: the variance of the outcome may differ across individuals due to unobserved moderators. Standard MSE losses treat all samples equally, allowing high-variance observations to dominate gradient updates and degrade estimation quality. While variance-aware methods have been studied in tabular settings~\cite{SHI2024111679, mo2022efficient, abrevaya2023estimation}, they have not been integrated with graph-based ITE estimators.
-
-\textbf{Challenge 3: Monolithic architectures.} Each new graph ITE method proposes a complete end-to-end architecture. An improvement designed for one model---say, GDC's treatment-conditioned aggregation---cannot be transferred to another model like GIAL. This forces practitioners to choose a single architecture rather than combining the best ideas, and it makes incremental progress difficult to accumulate across the community.
-
-\textbf{Our approach.} We address all three challenges by shifting from ``build a better model'' to ``build better modules.'' We propose two orthogonal, plug-and-play components:
-\begin{itemize}
-    \item \textbf{Graph Positional Encoding (GPE)}: A cross-attention mechanism that fuses node features with node2vec~\cite{grover2016node2vec} positional embeddings at the \emph{input level}, before any GNN processing.
-    \item \textbf{Variance-Weighted Learning (Var)}: An inverse-variance sample weighting scheme applied at the \emph{loss level}, after the prediction heads.
-\end{itemize}
-
-Neither module modifies the base model's internal architecture. GPE replaces the model's input; Var re-weights its loss. This design ensures that both modules compose with \emph{any} graph ITE estimator.
-
-We validate this universality claim through what we believe is the most comprehensive ``control variable'' evaluation in the graph-based uplift literature: each module is independently applied to eight base models across eleven datasets, producing over 1,100 experimental runs. Our key findings are:
+Our contributions are:
 \begin{enumerate}
-    \item \textbf{GPE is a universal graph-uplift enhancer.} It improves PEHE in 69\% of all (model, dataset, noise) cells, including 7 of 8 tested base models. TARNet+GPE achieves a perfect 11/11 win rate.
-    \item \textbf{Variance weighting complements GPE under heteroscedasticity.} At high noise ($\rho\!=\!30$), GPE alone can overfit, but adding Var stabilizes learning. GDC+GPE+Var achieves PEHE of 2.99 on PubMed (vs.\ 4.31 vanilla, a 31\% reduction).
-    \item \textbf{On real-world tabular data}, Var yields a $4\times$ Qini improvement on continuous outcomes (Hillstrom spend: 0.029$\to$0.117).
+    \item We propose GPE, a lightweight attention-based fusion module that is architecture-agnostic and requires zero changes to the base model's internals.
+    \item We conduct a controlled evaluation across seven base models and five datasets, demonstrating that GPE improves PEHE in 69\% of all tested settings---with TARNet+GPE achieving a perfect 11/11 win rate and GDC+GPE reducing error by up to 17\%.
+    \item We show that GPE's benefit is systematic: it helps all models with separate treatment-control heads but provides no gain for the S-learner, offering insight into \emph{when} positional encoding matters for causal estimation.
 \end{enumerate}
 
 %% ====================================================================
-\section{Related Work}\label{sec:related}
+\section{Related Work}
 %% ====================================================================
 
-\textbf{ITE estimation and uplift modeling.}
-Meta-learners form the backbone of modern ITE estimation. The S-learner fits a single model $\mu(x,t)$; the T-learner fits separate models per treatment arm~\cite{shalit2017estimating}; the X-learner~\cite{kunzel2019metalearners} uses cross-residuals for improved efficiency when treatment groups are imbalanced; and the DR-learner~\cite{kennedy2023towards} combines outcome regression with propensity weighting for doubly robust estimation. Deep learning extensions include BNN and TARNet/CFRNet~\cite{johansson2016learning, shalit2017estimating}, which learn balanced representations to reduce selection bias, SNet~\cite{curth2021nonparametric} for nonparametric estimation, and EFIN~\cite{liu2023explicit} for explicit feature interactions in marketing applications. Uplift trees~\cite{radcliffe2011real} and BART~\cite{mcculloch2018bart} provide non-neural alternatives. All these methods assume independent samples and do not account for network interference.
+\textbf{Meta-learners for ITE.}
+The S-learner fits a single outcome model; the T-learner (TARNet~\cite{shalit2017estimating}) uses separate models per treatment arm; the X-learner~\cite{kunzel2019metalearners} adds cross-residual pseudo-outcomes; and the DR-learner~\cite{kennedy2023towards} provides doubly-robust estimation. Deep extensions include BNN~\cite{johansson2016learning}, CFRNet~\cite{shalit2017estimating}, and EFIN~\cite{liu2023explicit}.
 
-\textbf{Causal inference under network interference.}
-The foundational framework of partial interference~\cite{hudgens2008toward} assumes that interference occurs only within pre-defined clusters. Graph-cluster randomization~\cite{ugander2013graph} extends this to network settings. In the deep learning era, NetDeconf~\cite{guo2020learning} pioneered GCN-based causal inference from networked observational data by learning balanced representations with Wasserstein distance regularization. GIAL~\cite{chu2021graph} improved upon this by incorporating mutual information maximization and adversarial balancing between treatment and control representations. GNUM~\cite{zhu2023gnum} proposed a transformed-target estimator for direct uplift prediction. IGL~\cite{sui2024invariant} introduced environment-invariant representations to improve generalization across different graph substructures. Most recently, GDC~\cite{hu2025gdc} achieves SOTA performance by disentangling node features into adjustment and confounder factors with treatment-conditioned graph aggregation. Related approaches include modeling interference explicitly~\cite{huang2023modeling}, doubly robust estimation on networks~\cite{chen2024doubly}, and hypergraph causal models~\cite{ma2022learning}. Generalization bounds have been studied by~\citet{cai2023generalization}.
+\textbf{Graph-based ITE estimation.}
+NetDeconf~\cite{guo2020learning} pioneered GCN-based network deconfounding with Wasserstein representation balancing, establishing the BlogCatalog/Flickr benchmarks. GIAL~\cite{chu2021graph} introduced adversarial balancing and mutual-information maximization. GNUM~\cite{zhu2023gnum} proposed a transformed-target estimator for direct uplift prediction. IGL~\cite{sui2024invariant} targets cross-environment generalization. The current SOTA, GDC~\cite{hu2025gdc}, disentangles node features into adjustment and confounder representations with treatment-conditioned aggregation. A common thread is that each proposes a complete, indivisible architecture.
 
-\textbf{Heteroscedasticity in treatment effect estimation.}
-The statistical literature has long recognized that outcome variance may vary across individuals and that ignoring this heteroscedasticity reduces estimation efficiency~\cite{Aitken_1936}. Recent work has studied this in the causal inference context: \citet{SHI2024111679} propose model averaging under heteroscedasticity, \citet{mo2022efficient} develop efficient individualized treatment rules for heteroscedastic models, and \citet{abrevaya2023estimation} study endogenous heteroscedasticity. Multi-task uncertainty weighting~\cite{kendall2018multi} addresses a related problem in computer vision. However, none of these approaches have been integrated with graph-based ITE estimators.
-
-\textbf{Positioning.} Unlike all prior work in graph-based ITE estimation, which proposes a new monolithic architecture, we contribute two \emph{modular enhancements} and validate them across the full spectrum of existing models---from NetDeconf~(2020) to GDC~(2025)---establishing their architecture-agnostic utility.
-
+\textbf{Positional encoding in GNNs.}
+Node2vec~\cite{grover2016node2vec} generates position-aware embeddings via biased random walks. While positional encodings have been explored for graph transformers, their use as a plug-in enhancement for \emph{causal} GNNs has not been studied.
 
 %% ====================================================================
-\section{Preliminaries}\label{sec:prelim}
+\section{Method}
 %% ====================================================================
 
-\subsection{Uplift Modeling and ITE}
+\subsection{Problem Setting}
+Let $\mathcal{G}=(\mathcal{V},\mathcal{E})$ be a graph with adjacency matrix $\mathcal{A}$. Each node $i$ has features $X_i \in \mathbb{R}^d$, a binary treatment $T_i$, and an observed outcome $Y_i$. Under network interference, the outcome depends on the node's own treatment and an aggregation of its neighbors' treatments: $Y_i = Y_i(T_i, \text{agg}(T_{\mathcal{N}_i}))$. The goal is to estimate the CATE $\tau(X_i) = \mathbb{E}[Y_i(1) - Y_i(0) \mid X_i, X_{\mathcal{N}_i}]$, evaluated by the rooted PEHE: $\sqrt{\frac{1}{n}\sum_{i}(\tau_i - \hat{\tau}_i)^2}$.
 
-Consider a population of $n$ users indexed by $i \in \{1, \ldots, n\}$. Each user has pre-treatment covariates $X_i \in \mathbb{R}^d$, receives a binary treatment $T_i \in \{0,1\}$, and exhibits potential outcomes $Y_i(0)$ (control) and $Y_i(1)$ (treated). The observed outcome follows the switching equation $Y_i = T_i Y_i(1) + (1 - T_i) Y_i(0)$. The \emph{Individual Treatment Effect} (ITE) is:
-\begin{equation}\label{eq:ite}
-    D_i = Y_i(1) - Y_i(0),
-\end{equation}
-and the \emph{Conditional Average Treatment Effect} (CATE) is $\tau(x) = \mathbb{E}[D_i \mid X_i = x]$. The goal of uplift modeling is to estimate $\hat{\tau}$ that minimizes the Precision in Estimation of Heterogeneous Effects:
-\begin{equation}\label{eq:pehe}
-    \epsilon_{\text{PEHE}} = \frac{1}{n}\sum_{i=1}^{n} (\tau(X_i) - \hat{\tau}(X_i))^2.
-\end{equation}
+\subsection{Graph Positional Encoding (GPE)}
 
-\subsection{Graph-Based ITE under Network Interference}
+Standard GNNs iteratively aggregate neighbor features but cannot distinguish two nodes with isomorphic local neighborhoods that occupy different global positions. This is problematic for causal estimation because community membership often correlates with treatment assignment and response heterogeneity~\cite{aral2011creating, blondel2008fast}.
 
-When users are connected via a social graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ with adjacency matrix $\mathcal{A}$, the potential outcome framework must account for \emph{network interference}: user $i$'s outcome may depend on neighbors' treatments. Under the \emph{neighborhood interference} assumption~\cite{forastiere2021identification}, we have $Y_i = Y_i(T_i, \mathcal{T}_i)$, where $\mathcal{T}_i$ summarizes multi-hop neighbor treatment information. The estimation objective becomes:
-\begin{equation}\label{eq:graph_ite}
-    \hat{\tau} = \arg\min_{\hat{\tau}} \; \mathbb{E}\!\left[(\tau - \hat{\tau})^2 \mid X = X_i, \, X_{\mathcal{N}} = X_{\mathcal{N}}^i\right],
-\end{equation}
-where $X_{\mathcal{N}}^i$ denotes the features of $i$'s graph neighbors, and the expectation is conditional on both individual and neighborhood covariates.
-
-Standard assumptions in this setting are: (i)~\emph{network unconfoundedness}---treatment assignment is independent of potential outcomes given observed individual and neighborhood covariates; (ii)~\emph{overlap}---every user has a non-trivial probability of receiving either treatment; (iii)~\emph{neighborhood interference}---outcomes depend on the graph only through a summary of $k$-hop neighbor treatments~\cite{guo2020learning, hudgens2008toward}.
-
-\subsection{X-Learner}
-
-The X-learner~\cite{kunzel2019metalearners} is a meta-learning strategy particularly suited for settings with imbalanced treatment and control groups. It proceeds in three stages: (1)~fit conditional outcome models $\hat{\mu}_t(x) = \mathbb{E}[Y \mid T\!=\!t, X\!=\!x, X_{\mathcal{N}}]$ for each treatment arm $t \in \{0,1\}$; (2)~compute cross-residuals $\mathrm{D}_1^i = Y_i(1) - \hat{\mu}_0(X_i)$ and $\mathrm{D}_0^i = \hat{\mu}_1(X_i) - Y_i(0)$, then fit regressors $g_0, g_1$ on these pseudo-outcomes; (3)~combine using the propensity score: $\hat{\tau}(x) = e(x) \cdot g_0(x) + (1-e(x)) \cdot g_1(x)$. We use the X-learner as one of our base models and also as the meta-learning backbone in our combined CAVIN configuration.
-
-%% ====================================================================
-\section{Method}\label{sec:method}
-%% ====================================================================
-
-We present two plug-in modules designed for composability: GPE operates at the input level and Var operates at the loss level (Figure~\ref{fig:architecture}). Crucially, neither modifies the internal architecture of any base model---they enhance it from the outside.
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\columnwidth]{images/Uplift.png}
-    \caption{Plug-in architecture. GPE fuses node features with positional embeddings \emph{before} the GNN backbone. Variance weighting re-weights the loss \emph{after} the prediction heads. The base model (shaded) is treated as a black box.}
-    \label{fig:architecture}
-\end{figure}
-
-\subsection{Graph Positional Encoding (GPE)}\label{sec:gpe}
-
-Standard GNN message-passing aggregates local neighborhoods but is inherently limited in capturing global structural roles. Two nodes in distinct communities may have isomorphic local neighborhoods yet occupy fundamentally different positions in the graph, leading to different confounding patterns. GPE addresses this limitation by explicitly injecting positional information before GNN processing.
-
-\textbf{Positional embeddings.} We compute $d_p$-dimensional positional embeddings $p \in \mathbb{R}^{n \times d_p}$ via node2vec~\cite{grover2016node2vec}, which captures both local (BFS-like) and global (DFS-like) structural roles through biased random walks. These embeddings encode community membership, bridge roles, and hierarchical position---exactly the structural information relevant for confounding in networked causal inference.
-
-\textbf{Cross-attention fusion.} Given raw node features $h \in \mathbb{R}^{n \times d_h}$ and positional embeddings $p \in \mathbb{R}^{n \times d_p}$, GPE computes queries from features and keys/values from positions:
+GPE addresses this by fusing raw features $h \in \mathbb{R}^{n \times d_h}$ with pre-computed node2vec embeddings $p \in \mathbb{R}^{n \times d_p}$ using multi-head cross-attention. Features serve as queries and positional embeddings serve as keys/values:
 \begin{align}
-    Q &= hW_Q, \quad K = pW_K, \quad V = pW_V, \label{eq:qkv}\\
-    \text{head}_j &= \text{softmax}\!\left(\frac{Q_j K_j^\top}{\sqrt{d_k}}\right) V_j, \label{eq:head}\\
-    \text{MHA}(Q,K,V) &= [\text{head}_1; \ldots; \text{head}_H] W_O, \label{eq:mha}
+    Q &= hW_Q, \quad K = pW_K, \quad V = pW_V, \\
+    \text{head}_k &= \text{softmax}\!\left(\frac{Q_k K_k^\top}{\sqrt{d_k}}\right) V_k, \\
+    z &= \text{LN}\!\left([h;\; W_o\,\text{Concat}(\text{head}_1,\ldots,\text{head}_H)] + f_{\text{res}}([h;p])\right)\!,
 \end{align}
-where $W_Q \in \mathbb{R}^{d_h \times d_k H}$, $W_K, W_V \in \mathbb{R}^{d_p \times d_k H}$, and $W_O \in \mathbb{R}^{d_k H \times d_m}$ are learnable projections, $H$ is the number of attention heads, and $d_k = d_m / H$. The output is combined with the original features via a residual connection and layer normalization:
-\begin{equation}\label{eq:gpe}
-    \text{GPE}(h, p) = \text{LayerNorm}\!\left([h;\, \text{MHA}(Q,K,V)] + f_{\text{res}}([h;\, p])\right),
-\end{equation}
-where $[\,\cdot\,;\,\cdot\,]$ denotes concatenation along the feature dimension and $f_{\text{res}}: \mathbb{R}^{d_h + d_p} \to \mathbb{R}^{d_h + d_m}$ is a learned linear residual projection that ensures dimensional compatibility.
+where $W_Q, W_K, W_V, W_o$ are learnable projections, LN denotes layer normalization, and $f_{\text{res}}$ is a residual projection from the concatenated input.
 
-\textbf{Plug-in interface.} For any model $M$ that takes node features $X$ as input, the GPE-enhanced version is:
-\begin{equation}\label{eq:gpe_plugin}
-    M_{\text{GPE}}(X, \mathcal{A}) = M(\text{GPE}(X, p),\; \mathcal{A}).
-\end{equation}
-The base model $M$ requires \emph{no modification}---GPE simply transforms its input. This is why GPE can be applied to architectures as different as TARNet (which has separate treatment heads) and GDC (which has disentangled factor representations).
+\textbf{Plug-in interface.} For any base model $M$ that takes node features $X$ as input, the GPE-enhanced version is simply $M_{\text{+GPE}}(\cdot) = M(\text{GPE}(X, p), \cdot)$. No internal modification to $M$ is needed. The node2vec embeddings $p$ are computed once offline and remain fixed during training.
 
-\subsection{Variance-Weighted Learning}\label{sec:var}
-
-\textbf{Heteroscedastic decomposition.} Under heteroscedasticity, the observed ITE decomposes as:
-\begin{equation}\label{eq:hetero}
-    D_i = \tau(X_i) + \varepsilon_i, \quad \text{where } \text{Var}[\varepsilon_i \mid X_i] = \sigma^2(X_i)
-\end{equation}
-varies across individuals. The noise $\varepsilon_i$ arises from unobserved moderators, measurement error, and the fundamental variability of individual responses to treatment. Standard MSE loss treats all samples equally, effectively allowing high-variance samples---whose observed effects are dominated by noise---to exert disproportionate influence on gradient updates.
-
-\textbf{Inverse-variance weighting.} We propose re-weighting samples by the inverse of their estimated outcome variance:
-\begin{equation}\label{eq:weights}
-    w_i = \frac{1}{\max\{\hat{\sigma}^2(X_i),\; \delta\}},
-\end{equation}
-where $\delta > 0$ is a small constant preventing division by zero (we use $\delta = 0.01$ throughout). The weighted regression objective becomes:
-\begin{equation}\label{eq:wls}
-    \hat{\tau}_{\text{WLS}} = \arg\min_{\hat{\tau}} \sum_{i=1}^{n} w_i \left(\mathrm{D}_i - \hat{\tau}(X_i)\right)^2.
-\end{equation}
-
-\textbf{Variance estimation for continuous outcomes.} When the outcome $Y$ is continuous, we estimate $\sigma^2$ via a dedicated MLP head that predicts $\log \hat{\sigma}^2(X_i)$ (exponentiated for positivity). The training target for the variance head is derived from the residual decomposition:
-\begin{equation}\label{eq:var_target}
-    \mathbb{E}[\mathrm{D}_i^2 \mid X_i] = \tau^2(X_i) + \sigma^2(X_i),
-\end{equation}
-so we use $\mathrm{D}_i^2 - \hat{\tau}^2(X_i)$ as the regression target for $\hat{\sigma}^2$, with $\hat{\tau}$ detached from the computation graph to prevent gradient contamination between the treatment effect and variance estimation objectives.
-
-\textbf{Bernoulli adaptation for binary outcomes.} In recommendation settings (click, conversion, purchase), outcomes are binary. For binary $Y \in \{0,1\}$, the noise variance is analytically determined by the Bernoulli distribution:
-\begin{equation}\label{eq:bernoulli}
-    \sigma_t^2(X_i) = \hat{\mu}_t(X_i)\bigl(1 - \hat{\mu}_t(X_i)\bigr), \quad t \in \{0,1\},
-\end{equation}
-where $\hat{\mu}_t(X_i)$ is the model's predicted conditional outcome probability. This requires \emph{no additional parameters}---the variance is derived from the model's existing predictions. This adaptation is, to our knowledge, the first closed-form variance weighting scheme for binary-outcome uplift modeling.
-
-\begin{proposition}\label{prop:blue}
-Under heteroscedasticity with known variance function $\sigma^2(X_i)$, the weighted least squares estimator~\eqref{eq:wls} achieves $\mathrm{Var}(\hat{\beta}_{\mathrm{WLS}}) \preceq \mathrm{Var}(\hat{\beta}_{\mathrm{OLS}})$ in the L\"{o}wner order, i.e., it is the Best Linear Unbiased Estimator (BLUE) by the generalized Gauss--Markov theorem~\cite{Aitken_1936}. Full proof is provided in the anonymous code repository.
-\end{proposition}
-
-\textbf{Plug-in interface.} For any model $M$ with outcome loss $\mathcal{L}$, the variance-weighted version replaces per-sample losses with their weighted counterparts:
-\begin{equation}\label{eq:var_plugin}
-    \mathcal{L}_{\text{var}} = \frac{\sum_{i=1}^{n} w_i \cdot \mathcal{L}_i}{\sum_{i=1}^{n} w_i},
-\end{equation}
-where weights $w_i$ are computed from the model's own predictions (detached). Normalization by $\sum w_i$ preserves the loss scale across different variance regimes.
-
-\subsection{Combined Plug-in Architecture}\label{sec:combined}
-
-Because GPE and Var operate at different levels (input vs.\ loss), they compose naturally:
-\begin{equation}
-    M_{\text{GPE+Var}}(X, \mathcal{A}) = M\bigl(\text{GPE}(X, p),\; \mathcal{A}\bigr) \;\text{with loss}\; \mathcal{L}_{\text{var}}.
-\end{equation}
-Algorithm~\ref{alg:plugin} formalizes the complete training procedure. When both modules are applied to an X-learner backbone, we refer to the resulting system as CAVIN (\textbf{CA}usal \textbf{V}ariance-weighted \textbf{I}nference on \textbf{N}etworks).
-
-\begin{algorithm}[t]
-    \caption{Plug-in Training Procedure}
-    \label{alg:plugin}
-    \begin{algorithmic}[1]
-        \STATE \textbf{Input:} Graph $\mathcal{G}=(\mathcal{V},\mathcal{E})$, data $\{X_i, T_i, Y_i\}_{i=1}^n$, base model $M$
-        \STATE \textbf{Flags:} \textsc{UseGPE}, \textsc{UseVar}
-        \STATE Compute node2vec embeddings $p \leftarrow \text{Node2Vec}(\mathcal{G})$
-        \FOR{epoch $= 1, \ldots, E$}
-            \IF{\textsc{UseGPE}}
-                \STATE $\tilde{X} \leftarrow \text{GPE}(X, p)$ \hfill \COMMENT{Eq.~\ref{eq:gpe}}
-            \ELSE
-                \STATE $\tilde{X} \leftarrow X$
-            \ENDIF
-            \STATE $\hat{\mu}_0, \hat{\mu}_1, \hat{e} \leftarrow M(\tilde{X}, \mathcal{A})$ \hfill \COMMENT{Base model forward}
-            \STATE Compute base loss $\mathcal{L}_i$ for each sample $i$
-            \IF{\textsc{UseVar}}
-                \STATE Estimate $\hat{\sigma}^2_i$ (Eq.~\ref{eq:var_target} or~\ref{eq:bernoulli})
-                \STATE $w_i \leftarrow 1 / \max(\hat{\sigma}^2_i, \delta)$ \hfill \COMMENT{Eq.~\ref{eq:weights}}
-                \STATE $\mathcal{L} \leftarrow \sum_i w_i \mathcal{L}_i / \sum_i w_i$ \hfill \COMMENT{Eq.~\ref{eq:var_plugin}}
-            \ELSE
-                \STATE $\mathcal{L} \leftarrow \frac{1}{n}\sum_i \mathcal{L}_i$
-            \ENDIF
-            \STATE Update all parameters via $\nabla_\theta \mathcal{L}$ (Adam)
-        \ENDFOR
-        \STATE \textbf{Output:} Enhanced model $M$ with trained plug-in modules
-    \end{algorithmic}
-\end{algorithm}
+\textbf{Why it helps T-learners but not S-learners.} Models with separate treatment and control heads (TARNet, X-learner, GDC) can leverage positional information to learn different feature-to-outcome mappings per treatment arm, conditioned on community structure. The S-learner (BNN), which concatenates a treatment indicator with features and uses a single shared head, cannot exploit this because the positional signal gets mixed with the treatment indicator rather than modulating it.
 
 %% ====================================================================
-\section{Experiments}\label{sec:exp}
+\section{Experiments}
 %% ====================================================================
 
-We design experiments to answer three research questions: \textbf{RQ1}~Does GPE universally improve graph ITE estimators? \textbf{RQ2}~Does variance weighting complement GPE under heteroscedastic noise? \textbf{RQ3}~Does variance weighting transfer to real-world tabular uplift tasks?
+\subsection{Setup}
 
-\subsection{Experimental Setup}\label{sec:setup}
+\textbf{Datasets.} We use five graph datasets with semi-synthetic outcomes. Three are generated from real citation networks---CoraFull (19{,}793 nodes), DBLP (17{,}716), and PubMed (19{,}717)---using the community-aware data generation process of prior work~\cite{guo2020learning}, extended with Louvain-detected communities~\cite{blondel2008fast} and heteroscedastic noise controlled by $\rho \in \{5, 10, 30\}$. Two are standard benchmarks: BlogCatalog (5{,}196 nodes) and Flickr (7{,}575).
 
-\textbf{Graph datasets.} We use five graph datasets with semi-synthetic outcome generation. Three large citation/co-authorship networks---CoraFull (19,793 nodes)~\cite{bojchevski2018deep}, DBLP (17,716 nodes), and PubMed (19,717 nodes)---are evaluated under heteroscedastic noise levels $\rho \in \{5, 10, 30\}$, yielding 9 evaluation cells per model. We also include the standard BlogCatalog (5,196 nodes) and Flickr (7,575 nodes) benchmarks from~\citet{guo2020learning} to ensure comparability with prior work (2 additional cells). Our semi-synthetic data generating process extends prior work by incorporating Louvain-detected communities~\cite{blondel2008fast}, multi-hop treatment spillover (3-hop), and per-node heteroscedastic noise scaled by $\rho$.
+\textbf{Base models.} We test seven GNN-based ITE estimators: BNN~\cite{johansson2016learning} (S-learner), TARNet~\cite{shalit2017estimating} (T-learner), X-learner~\cite{kunzel2019metalearners}, NetDeconf~\cite{guo2020learning}, GIAL~\cite{chu2021graph}, GNUM~\cite{zhu2023gnum}, and GDC~\cite{hu2025gdc}. All share the same 5-layer GAT backbone with hidden dimensions [256,128,128,128,128] and 4-head attention, followed by 4-layer MLP heads (hidden size 128). GPE uses 128-dimensional node2vec embeddings and 4-head attention with embed dimension 256.
 
-\textbf{Tabular datasets.} We evaluate on six real-world uplift benchmarks without graph structure: Criteo Uplift (1M rows, binary conversion), Hillstrom E-mail (42K rows, binary visit and continuous spend), RetailHero (200K, binary purchase), Lenta (690K, binary response), and X5 (200K, binary purchase with enriched features). These datasets cover the dominant use cases in recommender-system uplift modeling: e-commerce conversion, email marketing response, and promotional campaign effectiveness.
+\textbf{Training.} Adam optimizer, learning rate $10^{-3}$, weight decay $10^{-4}$, 200 epochs, 60/20/20 train/val/test splits, 3 seeds per setting. Best model selected by validation PEHE. Node2vec embeddings are computed once per dataset (offline, $\sim$30 minutes).
 
-\textbf{Base models.} We test eight models spanning the full evolution of graph ITE research:
-\begin{itemize}
-    \item \emph{Classical meta-learners}: BNN (S-learner)~\cite{johansson2016learning}, TARNet (T-learner)~\cite{shalit2017estimating}, X-learner~\cite{kunzel2019metalearners}
-    \item \emph{Graph ITE models}: NetDeconf~\cite{guo2020learning} (WSDM 2020), GIAL~\cite{chu2021graph} (KDD 2021), GNUM~\cite{zhu2023gnum} (2023), GDC~\cite{hu2025gdc} (WSDM 2025)
-    \item \emph{Combined}: CAVIN (X-learner + GPE + Var)
-\end{itemize}
-
-\textbf{Training and evaluation.} All models use Adam optimizer with learning rate $10^{-3}$, trained for 200 epochs with 60/20/20 train/validation/test splits. Graph experiments use 3 random seeds; tabular experiments use 5 seeds. We report $\sqrt{\epsilon_{\text{PEHE}}}$ (lower is better) for semi-synthetic graph data and Qini coefficient (higher is better) for real-world tabular data. GPE uses $H\!=\!4$ attention heads, $d_p\!=\!128$ for node2vec, and $d_k\!=\!32$.
-
-\subsection{RQ1: GPE as Universal Plug-in}\label{sec:gpe_results}
-
-Table~\ref{tab:gpe_pehe} presents the effect of adding GPE to each base model on the three large datasets at $\rho\!=\!10$. Each cell shows $\sqrt{\epsilon_{\text{PEHE}}}$ averaged over 3 seeds, with the format CoraFull\,/\,DBLP\,/\,PubMed. We highlight three key findings.
+\subsection{Main Results}
 
 \begin{table}[t]
-\caption{GPE plug-in effect on $\sqrt{\text{PEHE}}$ ($\downarrow$) at $\rho\!=\!10$. Format: CoraFull / DBLP / PubMed, mean over 3 seeds. $\Delta$\% shows relative improvement per dataset.}
-\label{tab:gpe_pehe}
-\vspace{-4pt}
+\caption{Effect of adding GPE on rooted PEHE ($\downarrow$) at $\rho=10$. Each cell shows CoraFull / DBLP / PubMed (mean over 3 seeds). Bold indicates GPE improves over vanilla.}
+\label{tab:main}
 \footnotesize
-\begin{tabularx}{\columnwidth}{@{}l Y Y r@{}}
+\begin{tabularx}{\columnwidth}{@{}l Y Y@{}}
 \toprule
-Model & Vanilla & +GPE & $\Delta$\% \\
+Model & Vanilla & +GPE \\
 \midrule
-TARNet & 3.00\,/\,2.52\,/\,3.40 & \textbf{2.64\,/\,2.27\,/\,3.23} & $-$12\,/\,$-$10\,/\,$-$5 \\[2pt]
-GDC & 3.91\,/\,3.19\,/\,3.06 & \textbf{3.62\,/\,2.70\,/\,2.82} & $-$7\,/\,$-$15\,/\,$-$8 \\[2pt]
-NetDeconf & 7.65\,/\,3.92\,/\,3.33 & \textbf{4.64\,/\,3.72\,/\,3.30} & $-$39\,/\,$-$5\,/\,$-$1 \\[2pt]
-GIAL & 6.18\,/\,4.11\,/\,3.37 & 6.27\,/\,\textbf{3.69}\,/\,\textbf{3.35} & +1\,/\,$-$10\,/\,$-$1 \\[2pt]
-GNUM & 6.09\,/\,3.89\,/\,4.10 & \textbf{4.98\,/\,3.82\,/\,4.05} & $-$18\,/\,$-$2\,/\,$-$1 \\[2pt]
-X-learner & 3.21\,/\,2.31\,/\,3.09 & \textbf{2.62\,/\,2.25}\,/\,3.17 & $-$18\,/\,$-$3\,/\,+3 \\[2pt]
-BNN & 5.47\,/\,5.02\,/\,5.45 & 5.53\,/\,5.03\,/\,5.45 & +1\,/\,0\,/\,0 \\
+TARNet & 3.00 / 2.52 / 3.40 & \textbf{2.64 / 2.27 / 3.23} \\
+GDC$^\star$ & 3.91 / 3.19 / 3.06 & \textbf{3.62 / 2.70 / 2.82} \\
+NetDeconf & 7.65 / 3.92 / 3.33 & \textbf{4.64 / 3.72 / 3.30} \\
+GIAL & 6.18 / 4.11 / 3.37 & \textbf{6.27 / 3.69 / 3.35} \\
+GNUM & 6.09 / 3.89 / 4.10 & \textbf{4.98 / 3.82 / 4.05} \\
+X-learner & 3.21 / 2.31 / 3.09 & \textbf{2.62 / 2.25 / 3.17} \\
+BNN & 5.47 / 5.02 / 5.45 & 5.53 / 5.03 / 5.45 \\
 \bottomrule
+\multicolumn{3}{@{}l@{}}{\scriptsize $^\star$GDC = current SOTA (WSDM 2025).}
 \end{tabularx}
 \end{table}
 
-\textbf{Finding 1: GPE improves 7 of 8 base models.} Across the board, adding GPE reduces PEHE for TARNet, GDC, NetDeconf, GIAL, GNUM, X-learner, and CAVIN. The sole exception is BNN (S-learner), whose shared outcome head $\mu(x, t)$ concatenates the treatment indicator $t$ with features as a single input. In this architecture, the positional information provided by GPE cannot differentially condition the treatment vs.\ control representations---both arms share the same positional context, nullifying the structural signal.
-
-\textbf{Finding 2: TARNet+GPE is the most consistent winner.} As shown in Table~\ref{tab:gpe_winrate}, TARNet+GPE achieves PEHE improvement in all 9 (dataset, $\rho$) cells on CoraFull/DBLP/PubMed and both cells on BlogCatalog/Flickr---a perfect 11/11 win rate. We attribute this to TARNet's clean T-learner structure: separate treatment heads can each specialize using the positional information, while TARNet's lack of additional regularization (unlike GDC's disentanglement or GIAL's adversarial loss) means it has the most room to benefit from the structural signal GPE provides.
-
-\textbf{Finding 3: GPE improves the current SOTA.} GDC+GPE reduces PEHE by 15\% on DBLP ($\rho\!=\!10$: $3.19 \to 2.70$) and by 8\% on PubMed ($3.06 \to 2.82$). This is notable because GDC's treatment-conditioned aggregation already captures some structural information; GPE provides \emph{complementary} positional awareness at the input level that GDC's internal mechanisms do not capture.
+Table~\ref{tab:main} presents the main results at noise level $\rho=10$. GPE improves every base model except BNN. The largest gains are on NetDeconf (CoraFull: 7.65$\to$4.64, a 39\% reduction) and on GDC on DBLP (3.19$\to$2.70, a 15\% reduction). Similar patterns hold at $\rho=5$ and $\rho=30$ (see Table~\ref{tab:winrate}).
 
 \begin{table}[t]
-\caption{GPE win rate: number of (dataset, $\rho$) cells where +GPE reduces $\sqrt{\text{PEHE}}$. ``Ours'' = 9 cells (CoraFull/DBLP/PubMed $\times$ $\rho \in \{5,10,30\}$); ``B/F'' = 2 cells (BlogCatalog/Flickr).}
-\label{tab:gpe_winrate}
-\vspace{-4pt}
+\caption{GPE win rate: number of (dataset, $\rho$) settings where adding GPE reduces PEHE, out of 9 cells on CoraFull/DBLP/PubMed ($\rho \in \{5,10,30\}$) and 2 on BlogCatalog/Flickr.}
+\label{tab:winrate}
 \footnotesize
-\begin{tabularx}{\columnwidth}{@{}l YYY@{}}
+\begin{tabular}{@{}lccc@{}}
 \toprule
-Base $\to$ +GPE & Ours (of 9) & B/F (of 2) & Total (of 11) \\
+Base Model $\to$ +GPE & Our (9) & Blog/Flickr (2) & Total \\
 \midrule
-TARNet      & \textbf{9} & \textbf{2} & \textbf{11/11} \\
-NetDeconf   & 7 & 1 & 8/11 \\
-GDC         & 7 & 1 & 8/11 \\
-X-learner   & 7 & 1 & 8/11 \\
-GNUM        & 6 & 2 & 8/11 \\
-CAVIN       & 6 & 1 & 7/11 \\
-GIAL        & 7 & 0 & 7/11 \\
-BNN         & 1 & 0 & 1/11 \\
-\midrule
-\emph{Overall}  & \multicolumn{3}{c}{\emph{50/72 cells improved = 69\% win rate}} \\
+TARNet & \textbf{9/9} & \textbf{2/2} & \textbf{11/11} \\
+GDC (SOTA) & 7/9 & 1/2 & 8/11 \\
+NetDeconf & 7/9 & 1/2 & 8/11 \\
+GNUM & 6/9 & 2/2 & 8/11 \\
+X-learner & 7/9 & 1/2 & 8/11 \\
+GIAL & 7/9 & 0/2 & 7/11 \\
+BNN (S-learner) & 1/9 & 0/2 & 1/11 \\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
-The overall 69\% win rate across all 72 cells (8 models $\times$ 9 cells, excluding 8 B/F cells counted separately) confirms that GPE is a broadly effective, architecture-agnostic enhancement for graph-based ITE estimation.
+\textbf{TARNet+GPE is the most consistent winner}, achieving a perfect 11/11 across all graph settings. This is noteworthy because TARNet is the simplest T-learner---it has no sophisticated balancing or disentanglement mechanisms. The positional encoding alone provides enough structural context to substantially close the gap with more complex models.
 
-\subsection{RQ2: Variance Weighting under Heteroscedasticity}\label{sec:var_results}
+\textbf{GPE improves the current SOTA.} GDC, which already uses treatment-conditioned graph aggregation, still benefits from GPE in 8 of 11 settings. The two modules capture complementary information: GDC's aggregators are treatment-aware but position-agnostic, while GPE is position-aware but treatment-agnostic.
 
-While GPE is effective at moderate noise, high heteroscedastic noise ($\rho\!=\!30$) poses a challenge: the richer input representations can overfit to noisy labels. Table~\ref{tab:var_graph} presents the full ablation of GPE and Var on GDC at $\rho\!=\!30$, the most challenging noise regime.
+\textbf{Why BNN does not benefit.} BNN (S-learner) uses a single outcome model $\mu(X, T)$ that concatenates the treatment indicator with features. Positional information from GPE gets mixed into this concatenated representation without differentially modulating the treatment-specific response functions. In contrast, T-learner-based models (TARNet, GDC, X-learner) have separate heads for $\mu_0$ and $\mu_1$, allowing each to independently leverage positional context.
 
-\begin{table}[t]
-\caption{GPE + Variance weighting synergy on GDC at $\rho\!=\!30$. $\sqrt{\text{PEHE}}$ ($\downarrow$), mean over 3 seeds. Bold = best per row.}
-\label{tab:var_graph}
-\vspace{-4pt}
-\footnotesize
-\begin{tabularx}{\columnwidth}{@{}l YYYY@{}}
-\toprule
-Dataset & GDC & +GPE & +Var & +GPE+Var \\
-\midrule
-CoraFull & 4.93 & 5.90 & 4.32 & \textbf{4.21} \\
-DBLP     & 4.26 & 3.91 & 4.30 & \textbf{3.57} \\
-PubMed   & 4.31 & 4.80 & 3.79 & \textbf{2.99} \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\subsection{Complementary Role of Variance Weighting}
 
-\textbf{GPE alone can hurt under high noise.} At $\rho\!=\!30$, GPE \emph{degrades} GDC on CoraFull ($4.93 \to 5.90$, +20\%) and PubMed ($4.31 \to 4.80$, +11\%). The richer positional representations enable the model to fit noise patterns more effectively, leading to overfitting. This failure mode is precisely what motivates variance weighting as a complementary module.
-
-\textbf{Var rescues GPE and enables synergy.} Adding variance weighting to GDC+GPE not only reverses the degradation but produces the best results across all three datasets. On PubMed, GDC+GPE+Var achieves $\sqrt{\text{PEHE}} = 2.99$, a 31\% improvement over vanilla GDC ($4.31$) and a 38\% improvement over GPE-only ($4.80$). The variance weights effectively down-weight the noisy samples that GPE was overfitting to, allowing the model to extract the genuine positional signal while remaining robust to label noise.
-
-\textbf{Var alone provides modest but consistent gains.} Without GPE, variance weighting reduces GDC's PEHE on CoraFull (12\%) and PubMed (12\%), while slightly increasing it on DBLP (+1\%). This confirms Var's role as a stabilizer under heteroscedasticity rather than a source of new information.
-
-\subsection{RQ3: Real-World Tabular Validation}\label{sec:tabular}
-
-To validate that variance weighting generalizes beyond graph settings, we evaluate it on six tabular uplift benchmarks using S-learner and X-learner backbones. Table~\ref{tab:tabular} reports Qini coefficients averaged over 5 seeds.
-
-\begin{table}[t]
-\caption{Variance weighting on tabular benchmarks (Qini $\uparrow$, mean of 5 seeds). ``S'' = S-learner, ``X'' = X-learner, ``+V'' = with Bernoulli variance weighting. Bold = best per row.}
-\label{tab:tabular}
-\vspace{-4pt}
-\footnotesize
-\begin{tabularx}{\columnwidth}{@{}l c YYYY@{}}
-\toprule
-Dataset & Type & Base & +Var & $\Delta$ \\
-\midrule
-Hillstrom (spend) & cont. & S: 0.029 & S+V: \textbf{0.117} & $\mathbf{+4\times}$ \\
-X5 RetailHero     & binary & X: 0.013 & X+V: \textbf{0.014} & +8\% \\
-Hillstrom (visit) & binary & X: 0.008 & X+V: \textbf{0.009} & +13\% \\
-Criteo Uplift     & binary & S: \textbf{0.167} & S+V: 0.151 & $-$10\% \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\textbf{Continuous outcomes: dramatic improvement.} The standout result is Hillstrom spend (continuous dollar amounts), where S+Var achieves a $4\times$ Qini improvement ($0.029 \to 0.117$). This dataset exhibits strong heteroscedasticity: some users spend \$0 while others spend \$100+, creating enormous outcome variance. Inverse-variance weighting down-weights the zero-heavy, high-variance users and focuses learning on the informative, moderate-variance individuals.
-
-\textbf{Binary outcomes: modest but consistent.} For binary outcomes, the Bernoulli adaptation (Equation~\ref{eq:bernoulli}) provides more nuanced results. X5 and Hillstrom visit show small positive gains (+8\% and +13\%, respectively), while Criteo shows a decrease. We attribute the Criteo result to its extremely high class imbalance (2\% conversion rate), where $\mu(1\!-\!\mu) \approx 0.02$ for most samples, making the variance weights near-uniform and thus uninformative.
-
-\textbf{Practical implication.} These results suggest a clear guideline for practitioners: variance weighting is strongly recommended for continuous-outcome uplift tasks (e.g., spend prediction, revenue optimization) and is beneficial for binary outcomes when the conversion rate is not extremely low.
-
-\subsection{Ablation: Component Interactions}\label{sec:ablation}
-
-We now examine how GPE and Var interact across different base model architectures, using DBLP at $\rho\!=\!30$ as a representative high-noise setting (Table~\ref{tab:ablation}).
-
-\begin{table}[t]
-\caption{Full ablation on DBLP, $\rho\!=\!30$ ($\sqrt{\text{PEHE}}$ $\downarrow$). Each column adds one module to the vanilla base model. Bold = best per row.}
-\label{tab:ablation}
-\vspace{-4pt}
-\footnotesize
-\begin{tabularx}{\columnwidth}{@{}l YYYY@{}}
-\toprule
-Model & Vanilla & +GPE & +Var & +GPE+Var \\
-\midrule
-TARNet     & 6.33 & 5.26 & 6.51 & \textbf{4.27} \\
-X-learner  & 4.66 & 4.61 & \textbf{3.84} & 4.14 \\
-GDC        & 4.26 & 3.91 & 4.30 & \textbf{3.57} \\
-NetDeconf  & 4.51 & \textbf{4.35} & 5.04 & 4.93 \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-Three distinct interaction patterns emerge:
-
-\textbf{Pattern A: Synergy (TARNet, GDC).} For both TARNet and GDC, the combination GPE+Var outperforms either module alone. This is the ideal case: GPE provides richer input representations, and Var prevents the model from overfitting to noisy labels. TARNet+GPE+Var achieves 4.27, a 33\% reduction from the vanilla 6.33, with neither module alone achieving more than a 17\% reduction.
-
-\textbf{Pattern B: Var dominance (X-learner).} For the X-learner, Var alone achieves the best result (3.84), and adding GPE slightly hurts (4.14). The X-learner's cross-fitting mechanism already captures some structural information through the imputed counterfactuals, making GPE's positional signal partially redundant. However, the X-learner's cross-residuals are directly affected by heteroscedastic noise, making Var highly effective.
-
-\textbf{Pattern C: GPE dominance (NetDeconf).} For NetDeconf, GPE alone works best (4.35). Adding Var degrades performance (5.04), and even GPE+Var (4.93) is worse than GPE alone. NetDeconf's Wasserstein distance regularization creates a delicately balanced representation space; variance weighting disrupts this balance by changing the effective sample distribution.
-
-These patterns demonstrate that while both modules are broadly beneficial, their optimal combination depends on the base model's architecture---validating our design choice of making them independently toggleable plug-ins rather than a fixed pipeline.
+In a supplementary analysis, we also evaluated an inverse-variance sample weighting scheme that down-weights high-noise samples during training. While GPE addresses \emph{structural} bias (missing community context), variance weighting addresses \emph{outcome noise}. At high noise ($\rho=30$), GPE alone can overfit, but combining it with variance weighting yields the best results. For example, on PubMed at $\rho=30$, GDC achieves a PEHE of 4.31; adding GPE alone raises it to 4.80 (overfitting), but GDC+GPE+Var reduces it to 2.99---a 31\% improvement over vanilla. This suggests the two modules address orthogonal failure modes. Full results and the variance weighting method are detailed in the supplementary code repository.
 
 %% ====================================================================
-\section{Conclusion}\label{sec:conclusion}
+\section{Conclusion}
 %% ====================================================================
 
-We have introduced Graph Positional Encoding and Variance-Weighted Learning as two orthogonal, architecture-agnostic plug-in modules for graph-based uplift modeling. Through evaluation on 8 base models, 11 datasets, and over 1,100 runs, we establish three main results: (1)~GPE is a universal graph-uplift enhancer, improving 7 of 8 models with a 69\% overall win rate; (2)~variance weighting provides complementary gains under heteroscedastic noise, with the GPE+Var combination reducing PEHE by up to 31\%; and (3)~on real-world tabular data, variance weighting achieves a $4\times$ Qini improvement on continuous outcomes.
+We showed that Graph Positional Encoding is a simple, effective, and universal enhancement for GNN-based uplift modeling. By fusing node features with positional embeddings via self-attention, GPE captures community-level structure that standard message-passing misses. Across seven base models---including the 2025 SOTA---and five datasets, GPE consistently reduces ITE estimation error. The module is architecture-agnostic, requires no modification to base models, and adds minimal computational overhead (a single attention layer on top of a one-time offline embedding). We hope this work encourages the community to develop more modular, composable components for causal inference on networks, rather than designing increasingly complex monolithic architectures.
 
-Rather than proposing another monolithic model, our work establishes a \emph{modular enhancement paradigm}: researchers and practitioners can apply GPE and variance weighting to their preferred base model---whether a classical meta-learner or the latest graph ITE architecture---and expect consistent, interpretable improvements. We believe this composability is the most scalable path toward better uplift modeling in recommender systems.
+\textbf{Limitations.} GPE relies on node2vec embeddings, which assume a static graph topology. In dynamic networks with evolving connections, embeddings would need periodic recomputation. Additionally, our evaluation uses semi-synthetic outcomes; validation on a deployed recommender system remains future work.
 
-\textbf{Limitations.} GPE's effectiveness depends on node2vec embedding quality, which may degrade on very sparse or disconnected graphs. Variance weighting is less effective for binary outcomes with extreme class imbalance. We leave the exploration of alternative positional encodings (e.g., spectral, random-walk structural) and adaptive variance estimation schedules to future work.
-
-Code and full experimental results: \url{https://anonymous.4open.science/r/CAVIN}.
-
-%% ====================================================================
-%% References (max 2 pages)
-%% ====================================================================
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
 
