@@ -4,18 +4,11 @@
 
 \usepackage{booktabs}
 \usepackage{multirow}
-\usepackage{amsmath,amssymb,mathtools,amsthm}
+% amsmath, amssymb, amsthm are loaded by acmart — do not reload
+\usepackage{mathtools}
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage[capitalize,noabbrev]{cleveref}
-
-\theoremstyle{plain}
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{lemma}[theorem]{Lemma}
-\theoremstyle{definition}
-\newtheorem{definition}[theorem]{Definition}
-\newtheorem{assumption}[theorem]{Assumption}
 
 \setcopyright{none}
 \copyrightyear{2025}
@@ -23,6 +16,27 @@
 \begin{document}
 
 \title{Graph Positional Encoding and Variance-Weighted Learning\\as Universal Plug-ins for Uplift Modeling}
+
+%% ACM CCS concepts (mandatory for papers > 2 pages)
+\begin{CCSXML}
+<ccs2012>
+<concept>
+<concept_id>10002951.10003317.10003347.10003350</concept_id>
+<concept_desc>Information systems~Recommender systems</concept_desc>
+<concept_significance>500</concept_significance>
+</concept>
+<concept>
+<concept_id>10010147.10010257.10010293.10010294</concept_id>
+<concept_desc>Computing methodologies~Neural networks</concept_desc>
+<concept_significance>300</concept_significance>
+</concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Information systems~Recommender systems}
+\ccsdesc[300]{Computing methodologies~Neural networks}
+
+\keywords{uplift modeling, individual treatment effect, graph neural networks, positional encoding, heteroscedasticity}
 
 \begin{abstract}
 Estimating Individual Treatment Effects (ITE) from networked observational data is critical for personalized recommendation, yet existing graph-based methods are monolithic—improvements to one architecture do not transfer to others. We introduce two orthogonal, plug-and-play modules that enhance \emph{any} graph ITE estimator: (1)~\textbf{Graph Positional Encoding (GPE)}, a multi-head self-attention fusion of node features and node2vec positional embeddings that captures community-level structural information, and (2)~\textbf{Variance-Weighted Learning}, an inverse-variance sample weighting scheme that mitigates heteroscedastic noise in treatment effect estimation. We evaluate both modules as drop-in enhancements on eight base models—including the foundational NetDeconf~(WSDM~2020) and the current state-of-the-art GDC~(WSDM~2025)—across five graph datasets and six real-world tabular uplift benchmarks, totaling over 1,100 experimental runs. GPE improves PEHE in 69\% of all graph settings, with TARNet+GPE achieving a perfect 11/11 win rate. On continuous outcomes, variance weighting yields a 4$\times$ Qini improvement. On high-noise graph settings, the combination of GPE and variance weighting reduces GDC's PEHE by up to 31\%. Our results establish that these modules constitute a general-purpose enhancement paradigm for graph-based uplift modeling in recommender systems.
