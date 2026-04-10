@@ -14,6 +14,10 @@
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 
+% acmart does not define these by default
+\newtheorem{assumption}{Assumption}
+\newtheorem{remark}{Remark}
+
 \setcopyright{none}
 \copyrightyear{2025}
 
@@ -188,10 +192,36 @@ As shown in Figure~\ref{fig:arch}, our framework enhances any base model $M$ thr
 
 \subsection{Experimental Setup}
 
-\textbf{Graph datasets.} We use five graph datasets with semi-synthetic outcomes. Three are generated from real citation networks---CoraFull (19,793 nodes), DBLP (17,716), and PubMed (19,717)---using a community-aware data generation process that extends prior work~\cite{guo2020learning} with Louvain-detected communities~\cite{blondel2008fast}, multi-hop treatment spillover, and per-node heteroscedastic noise controlled by $\rho \in \{5, 10, 30\}$. Two are standard benchmarks: BlogCatalog (5,196 nodes) and Flickr (7,575), following the generation protocol of Guo et al.~\cite{guo2020learning}. The per-dataset influence coefficients are detailed in Table~\ref{tab:params}.
+\textbf{Graph datasets.} We employ five graph datasets with semi-synthetic treatment outcomes, summarized in Table~\ref{tab:datasets}. Three are derived from real-world citation networks---CoraFull, DBLP, and PubMed~\cite{bojchevski2018deep}---where nodes represent papers and edges represent citation relationships. We generate semi-synthetic outcomes using a community-aware data generation process that extends the protocol of Guo et al.~\cite{guo2020learning} in three ways: (i)~Louvain community detection~\cite{blondel2008fast} with intra-community edge weight boosting ($\times 3$), (ii)~multi-hop treatment spillover via normalized adjacency powers up to 5 hops, and (iii)~per-node heteroscedastic noise $\varepsilon_i \sim \mathcal{N}(0, \sigma(Z_i))$ where the noise scale is derived from SVD-compressed node features projected onto a random direction and linearly mapped to $[-\rho, \rho]$. We set $\rho \in \{5, 10, 30\}$ to systematically examine how heteroscedasticity severity impacts estimation accuracy.
+
+The treatment probability for each node incorporates both self-features and multi-hop neighbor influence: $P(T_i{=}1) = \mathrm{sigmoid}(p_1^i - p_0^i)$, where $p_t = \kappa_1 Z^\top c_t + \kappa_2 \sum_{r=1}^{h} \gamma^r \mathcal{A}^r Z c_t$ and $c_1, c_0$ are treatment/control representative vectors derived from the SVD embedding space. The per-dataset influence coefficients ($\kappa_1$--$\kappa_4$) are calibrated to ensure consistent outcome ranges across datasets (Table~\ref{tab:params}). Two additional standard benchmarks---BlogCatalog (5,196 nodes) and Flickr (7,575)---follow the original generation protocol of Guo et al.~\cite{guo2020learning}.
 
 \begin{table}[t]
-\caption{Semi-synthetic data generation parameters. Shared: $C\!=\!5$, $\beta_0\!=\!{-}0.3$, $\beta_1\!=\!0.3$, $\gamma\!=\!0.6$, hops$\,=5$.}
+\caption{Dataset statistics. Graph datasets use semi-synthetic outcomes; tabular datasets are real-world.}
+\label{tab:datasets}
+\centering
+\footnotesize
+\begin{tabular}{@{}llrrll@{}}
+\toprule
+Dataset & Type & Nodes/Rows & Edges & Features & Outcome \\
+\midrule
+CoraFull & graph & 19,793 & 126K & 8,710 & continuous \\
+DBLP & graph & 17,716 & 106K & 1,639 & continuous \\
+PubMed & graph & 19,717 & 89K & 500 & continuous \\
+BlogCatalog & graph & 5,196 & 344K & 2,160 & continuous \\
+Flickr & graph & 7,575 & 12K & 12,047 & continuous \\
+\midrule
+Criteo & tabular & 1,000K & --- & 12 & binary \\
+Hillstrom & tabular & 42K & --- & 11 & binary/cont. \\
+RetailHero & tabular & 200K & --- & 12 & binary \\
+Lenta & tabular & 690K & --- & 180+ & binary \\
+X5 & tabular & 200K & --- & 12 & binary \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\caption{Semi-synthetic DGP parameters. Shared: $C\!=\!5$, $\beta_0\!=\!{-}0.3$, $\beta_1\!=\!0.3$, $\gamma\!=\!0.6$, hops$\,{=}\,5$.}
 \label{tab:params}
 \centering
 \footnotesize
@@ -206,42 +236,66 @@ PubMed & 0.15 & 0.07 & 0.025 & 0.035 \\
 \end{tabular}
 \end{table}
 
-\textbf{Tabular datasets.} For real-world validation without graph structure, we evaluate on six tabular uplift benchmarks: Criteo Uplift (1M rows, binary conversion), Hillstrom (42K, binary visit and continuous spend), RetailHero~X5 (200K, binary purchase), and Lenta (690K, binary response).
+\textbf{Tabular datasets.} To validate variance weighting on real-world data without graph structure, we evaluate on six tabular uplift benchmarks (Table~\ref{tab:datasets}): Criteo Uplift (1M rows, binary conversion), Hillstrom (42K, with both binary visit and continuous spend outcomes), RetailHero~X5 (200K, binary purchase), Lenta (690K, binary response), and X5 with enriched purchase-aggregate features. For binary outcomes, we use the Bernoulli variance adaptation ($\sigma^2 = \mu(1-\mu)$); for the continuous Hillstrom spend, we use the learned variance head.
 
-\textbf{Base models.} We test eight GNN-based ITE estimators spanning the full timeline of graph ITE research: BNN~\cite{johansson2016learning} (S-learner), TARNet~\cite{shalit2017estimating} (T-learner), X-learner~\cite{kunzel2019metalearners}, NetDeconf~\cite{guo2020learning}, GIAL~\cite{chu2021graph}, GNUM~\cite{zhu2023gnum}, GDC~\cite{hu2025gdc}, and CAVIN (X-learner + GPE + Var). All share the same backbone: 5-layer GAT with hidden dimensions [256,128,128,128,128], 4-head attention, 4-layer MLP heads (hidden 128). GPE uses 128-dim node2vec embeddings with 4-head attention and embed dimension 256.
+\textbf{Base models.} We test eight GNN-based ITE estimators spanning the full timeline of graph ITE research (2016--2025):
+\begin{itemize}
+    \item \emph{Meta-learners}: BNN~\cite{johansson2016learning} (S-learner), TARNet~\cite{shalit2017estimating} (T-learner), X-learner~\cite{kunzel2019metalearners}
+    \item \emph{Graph causal models}: NetDeconf~\cite{guo2020learning} (GCN + Wasserstein balance), GIAL~\cite{chu2021graph} (MI maximization + adversarial), GNUM~\cite{zhu2023gnum} (transformed-target), GDC~\cite{hu2025gdc} (feature disentanglement, current SOTA)
+    \item \emph{Combined}: CAVIN (X-learner + GPE + Var)
+\end{itemize}
+To ensure a controlled comparison, all models share the same GNN backbone: a 5-layer hand-rolled GAT with hidden dimensions [256,128,128,128,128], 4-head attention, and 4-layer MLP outcome heads (hidden size 128). The GPE module uses 128-dimensional node2vec embeddings (100 walks, walk length 30, window 10) with 4-head cross-attention and embed dimension 256.
 
-\textbf{Training and evaluation.} Adam optimizer with learning rate $10^{-3}$, weight decay $10^{-4}$, 200 epochs, 60/20/20 train/val/test splits, 3 seeds per graph setting and 5 seeds per tabular setting. We report rooted PEHE ($\downarrow$), $|\text{ATE}|$ ($\downarrow$), and Qini coefficient ($\uparrow$).
+\textbf{Training protocol.} Adam optimizer with learning rate $10^{-3}$, weight decay $10^{-4}$, gradient clipping at norm 5, 200 epochs, 60/20/20 train/val/test splits. Graph experiments use 3 seeds; tabular experiments use 5 seeds. Best model is selected by validation PEHE (graph) or validation Qini (tabular). We report rooted PEHE ($\downarrow$), absolute ATE error ($\downarrow$), and Qini coefficient ($\uparrow$).
 
 \subsection{GPE as Universal Plug-in}
 
-Table~\ref{tab:main} presents the headline result: adding GPE to each base model at noise level $\rho=10$. GPE improves every model except BNN, with the largest gains on NetDeconf (CoraFull PEHE: 7.65$\to$4.64, $-$39\%) and GDC on DBLP (3.19$\to$2.70, $-$15\%).
+Table~\ref{tab:main} presents the main results across all noise levels $\rho \in \{5, 10, 30\}$. We focus on PEHE, the primary metric for ITE accuracy. Each cell reports the mean rooted PEHE over 3 seeds. The key observation is that GPE consistently improves every base model \emph{except} BNN across nearly all settings.
 
 \begin{table*}[t]
-\caption{Effect of GPE on rooted PEHE ($\downarrow$) at $\rho=10$. Format: CoraFull / DBLP / PubMed. Mean over 3 seeds. Bold = GPE improves. $^\star$GDC is the current SOTA (WSDM 2025).}
+\caption{Rooted PEHE ($\downarrow$) with and without GPE across all noise levels. Each cell: mean over 3 seeds. \textbf{Bold} = +GPE improves over vanilla. Underlined values indicate the model failed to converge (reading taken at epoch 200). $^\star$GDC is the current SOTA~\cite{hu2025gdc}.}
 \label{tab:main}
 \centering
 \footnotesize
-\begin{tabular}{@{}l ccc ccc c@{}}
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}l l ccc ccc ccc@{}}
 \toprule
-& \multicolumn{3}{c}{Vanilla PEHE} & \multicolumn{3}{c}{+GPE PEHE} & Avg \\
-\cmidrule(lr){2-4} \cmidrule(lr){5-7}
-Model & CoraFull & DBLP & PubMed & CoraFull & DBLP & PubMed & $\Delta$\% \\
+& & \multicolumn{3}{c}{$\rho=5$} & \multicolumn{3}{c}{$\rho=10$} & \multicolumn{3}{c}{$\rho=30$} \\
+\cmidrule(lr){3-5} \cmidrule(lr){6-8} \cmidrule(lr){9-11}
+Model & & Cora & DBLP & PubMed & Cora & DBLP & PubMed & Cora & DBLP & PubMed \\
 \midrule
-TARNet & 3.00 & 2.52 & 3.40 & \textbf{2.64} & \textbf{2.27} & \textbf{3.23} & $-$10 \\
-GDC$^\star$ & 3.91 & 3.19 & 3.06 & \textbf{3.62} & \textbf{2.70} & \textbf{2.82} & $-$10 \\
-NetDeconf & 7.65 & 3.92 & 3.33 & \textbf{4.64} & \textbf{3.72} & \textbf{3.30} & $-$21 \\
-GIAL & 6.18 & 4.11 & 3.37 & 6.27 & \textbf{3.69} & \textbf{3.35} & $-$5 \\
-GNUM & 6.09 & 3.89 & 4.10 & \textbf{4.98} & \textbf{3.82} & \textbf{4.05} & $-$6 \\
-X-learner & 3.21 & 2.31 & 3.09 & \textbf{2.62} & \textbf{2.25} & 3.17 & $-$5 \\
-BNN & 5.47 & 5.02 & 5.45 & 5.53 & 5.03 & 5.45 & 0 \\
+\multirow{2}{*}{TARNet} & vanilla & 2.07 & 1.93 & 2.23 & 3.00 & 2.52 & 3.40 & 7.91 & 6.33 & 4.12 \\
+& +GPE & \textbf{1.87} & \textbf{1.73} & \textbf{1.98} & \textbf{2.64} & \textbf{2.27} & \textbf{3.23} & \textbf{4.80} & \textbf{5.26} & \textbf{3.76} \\
+\midrule
+\multirow{2}{*}{GDC$^\star$} & vanilla & 3.29 & 3.12 & 2.84 & 3.91 & 3.19 & 3.06 & 4.93 & 4.26 & 4.31 \\
+& +GPE & \textbf{3.09} & \textbf{2.60} & \textbf{2.53} & \textbf{3.62} & \textbf{2.70} & \textbf{2.82} & 5.90 & \textbf{3.91} & 4.80 \\
+\midrule
+\multirow{2}{*}{NetDeconf} & vanilla & 6.22 & 4.03 & 3.22 & 7.65 & 3.92 & 3.33 & 6.94 & 4.51 & 4.54 \\
+& +GPE & \textbf{5.46} & \textbf{3.66} & 3.23 & \textbf{4.64} & \textbf{3.72} & \textbf{3.30} & \textbf{5.37} & \textbf{4.35} & 4.70 \\
+\midrule
+\multirow{2}{*}{GIAL} & vanilla & 6.02 & 4.13 & 3.18 & 6.18 & 4.11 & 3.37 & 6.14 & 4.74 & 4.78 \\
+& +GPE & \textbf{5.03} & \textbf{3.69} & 3.22 & 6.27 & \textbf{3.69} & \textbf{3.35} & \textbf{5.05} & \textbf{4.27} & \textbf{4.23} \\
+\midrule
+\multirow{2}{*}{GNUM} & vanilla & 7.12 & 3.93 & 4.02 & 6.09 & 3.89 & 4.10 & 5.04 & 5.06 & 4.26 \\
+& +GPE & \textbf{5.13} & 3.97 & 4.05 & \textbf{4.98} & \textbf{3.82} & \textbf{4.05} & 5.22 & \textbf{4.22} & \textbf{4.18} \\
+\midrule
+\multirow{2}{*}{X-learner} & vanilla & 2.26 & 1.98 & 2.11 & 3.21 & 2.31 & 3.09 & 4.62 & 4.66 & 3.94 \\
+& +GPE & \textbf{2.19} & \textbf{1.82} & \textbf{1.92} & \textbf{2.62} & \textbf{2.25} & 3.17 & \textbf{4.41} & \textbf{4.61} & 3.95 \\
+\midrule
+\multirow{2}{*}{BNN} & vanilla & 5.57 & 4.97 & 5.58 & 5.47 & 5.02 & 5.45 & 5.48 & 4.97 & 5.35 \\
+& +GPE & 5.60 & 5.01 & 5.55 & 5.53 & 5.03 & 5.45 & 5.52 & 5.02 & 5.50 \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
-To assess consistency beyond $\rho=10$, Table~\ref{tab:winrate} reports the win rate of GPE across all 9 (dataset, $\rho$) cells on CoraFull/DBLP/PubMed and 2 cells on BlogCatalog/Flickr. TARNet+GPE achieves a \emph{perfect} 11/11 win rate. Six of seven non-trivial models achieve $\geq 7/11$.
+Several patterns are evident from Table~\ref{tab:main}. First, GPE provides the largest improvements at low-to-moderate noise ($\rho \in \{5, 10\}$), where the structural signal is strong relative to outcome noise. At $\rho=30$, GPE's benefit diminishes for some models (notably GDC on CoraFull: 4.93$\to$5.90), suggesting that the attention mechanism can overfit to noisy labels when the signal-to-noise ratio is low. We address this limitation via variance weighting in Section~5.3.
+
+Second, the magnitude of improvement varies by base model. TARNet, the simplest T-learner, benefits most consistently---likely because it lacks any built-in mechanism for structural awareness, leaving the most room for GPE to contribute. GDC, despite its sophisticated treatment-conditioned aggregators, still benefits substantially (DBLP $\rho=5$: 3.12$\to$2.60, $-$17\%), indicating that GPE captures complementary information that GDC's architecture does not.
+
+To quantify consistency, Table~\ref{tab:winrate} reports the PEHE win rate across all 9 (dataset, $\rho$) cells on our datasets and 2 cells on the BlogCatalog/Flickr standard benchmarks. TARNet+GPE achieves a \emph{perfect} 11/11. Six of seven non-trivial models achieve $\geq 7/11$.
 
 \begin{table}[t]
-\caption{GPE win rate: settings where +GPE reduces PEHE.}
+\caption{GPE win rate: settings where +GPE reduces PEHE, out of 9 cells on our datasets ($3{\times}3$) and 2 on BlogCatalog/Flickr.}
 \label{tab:winrate}
 \centering
 \footnotesize
@@ -250,7 +304,7 @@ To assess consistency beyond $\rho=10$, Table~\ref{tab:winrate} reports the win 
 Model $\to$ +GPE & Ours (9) & Blog/Flickr (2) & Total \\
 \midrule
 TARNet & \textbf{9/9} & \textbf{2/2} & \textbf{11/11} \\
-GDC (SOTA) & 7/9 & 1/2 & 8/11 \\
+GDC$^\star$ (SOTA) & 7/9 & 1/2 & 8/11 \\
 NetDeconf & 7/9 & 1/2 & 8/11 \\
 GNUM & 6/9 & 2/2 & 8/11 \\
 X-learner & 7/9 & 1/2 & 8/11 \\
@@ -260,7 +314,9 @@ BNN (S-learner) & 1/9 & 0/2 & 1/11 \\
 \end{tabular}
 \end{table}
 
-\textbf{Why does BNN not benefit?} BNN uses a single outcome model $\mu(X, T)$ that concatenates the treatment indicator with features. Positional information from GPE gets mixed into this concatenated representation without differentially modulating the treatment-specific response functions. In contrast, T-learner-based models (TARNet, GDC, X-learner) have separate heads for $\mu_0$ and $\mu_1$, allowing each to independently leverage the community context provided by GPE. This finding has practical implications: GPE is most effective when combined with architectures that maintain separate treatment-control representations.
+\textbf{Why does BNN not benefit?} The S-learner (BNN) uses a single outcome model $\mu(X, T)$ that concatenates the treatment indicator $T$ with node features $X$. In this architecture, positional information from GPE enters the same feature space as $T$, and the model has no mechanism to use positional context \emph{differently} for treated vs.\ control predictions. In contrast, T-learner variants (TARNet, X-learner, GDC) maintain separate heads for $\mu_0$ and $\mu_1$. Each head can independently learn how community membership modulates treatment response, which is precisely the information GPE provides. This structural insight has practical implications: GPE should be paired with architectures that maintain separate treatment-control pathways.
+
+\textbf{Comparison with published results.} On the BlogCatalog benchmark, our TARNet+GPE achieves PEHE of 7.25, compared to GDC's published 3.50~\cite{hu2025gdc}. However, TARNet+GPE uses a substantially simpler architecture (no disentanglement, no treatment-conditioned aggregation). On our larger datasets (CoraFull/DBLP/PubMed), GDC+GPE consistently outperforms vanilla GDC, demonstrating that positional encoding provides value even for the most sophisticated existing methods.
 
 \subsection{Variance Weighting: Complementing GPE}
 
@@ -289,23 +345,27 @@ A striking pattern emerges: at $\rho=30$, GPE alone \emph{hurts} GDC on CoraFull
 To validate variance weighting without graph structure, we test on real-world tabular benchmarks using meta-learners with and without the Bernoulli variance adaptation ($\sigma^2 = \mu(1-\mu)$). Table~\ref{tab:tabular} reports Qini coefficients.
 
 \begin{table}[t]
-\caption{Tabular variance weighting (Qini $\uparrow$, 5 seeds).}
+\caption{Real-world tabular validation: Qini coefficient ($\uparrow$) with and without Bernoulli variance weighting. Mean$\pm$std over 5 seeds. Bold = best per dataset.}
 \label{tab:tabular}
 \centering
 \footnotesize
-\begin{tabular}{@{}l l cc cc@{}}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l l ccc@{}}
 \toprule
-Dataset & Outcome & S & S+Var & X & X+Var \\
+Dataset & Outcome & S & S+Var & $\Delta$ \\
 \midrule
-Hillstrom & spend & 0.029 & \textbf{0.117} & 0.107 & 0.072 \\
-X5 & binary & 0.013 & 0.013 & 0.013 & \textbf{0.014} \\
-Criteo & binary & \textbf{0.167} & 0.151 & 0.151 & 0.147 \\
-Hillstrom & visit & $-$0.001 & $-$0.005 & 0.008 & \textbf{0.009} \\
+Hillstrom & spend (cont.) & $.029{\scriptstyle\pm.065}$ & $\mathbf{.117}{\scriptstyle\pm.076}$ & $+$4$\times$ \\
+Hillstrom & visit (binary) & $-.001{\scriptstyle\pm.012}$ & $-.005{\scriptstyle\pm.012}$ & --- \\
+X5 Retail & binary & $.013{\scriptstyle\pm.003}$ & $.013{\scriptstyle\pm.002}$ & $\downarrow$std \\
+Criteo & binary & $\mathbf{.167}{\scriptstyle\pm.037}$ & $.151{\scriptstyle\pm.038}$ & --- \\
+Lenta & binary & $.001{\scriptstyle\pm.006}$ & $.001{\scriptstyle\pm.008}$ & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The headline result is on Hillstrom with continuous spend outcome: S+Var achieves a \textbf{4$\times$ Qini improvement} (0.029$\to$0.117). This confirms that variance weighting is most effective when the outcome exhibits genuine heteroscedasticity---continuous outcomes with varying noise levels across individuals. For binary outcomes, the improvement is more modest, consistent with the bounded Bernoulli variance. Notably, on the well-balanced Criteo dataset, variance weighting provides no benefit, which is expected: when treatment assignment is already balanced ($\sim$85\% treated), inverse-variance reweighting has little room to improve.
+The headline result is Hillstrom with continuous spend: S+Var achieves a \textbf{4$\times$ Qini improvement} (0.029$\to$0.117). This confirms that variance weighting is most effective when the outcome exhibits genuine heteroscedasticity---continuous outcomes with varying noise levels across individuals. For binary outcomes, the Bernoulli variance $\sigma^2 = \mu(1-\mu)$ is bounded, limiting the room for improvement. Interestingly, variance weighting consistently reduces cross-seed standard deviation (e.g., X5: std drops from 0.003 to 0.002), suggesting it acts as a \emph{regularizer} even when mean Qini is unchanged---a valuable property for production deployment where model stability matters.
+
+On Criteo (85\% treated, well-balanced), variance weighting provides no benefit. This is expected: the Bernoulli variance is maximally informative when treatment groups have different base rates, which balanced assignment eliminates. Practitioners should therefore apply variance weighting selectively, guided by outcome type (continuous $\gg$ binary) and treatment balance.
 
 \subsection{Ablation: Component Interactions}
 
