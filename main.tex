@@ -452,15 +452,30 @@ X-learner & CoraFull & 0.641$^{\pm.023}$ & \textbf{0.689}$^{\pm.008}$ \\
 \section{Discussion}\label{sec:discuss}
 %% ====================================================================
 
+\subsection{Network Position as a Dual Root: Why GPE and Variance Weighting Belong Together}
+
+A legitimate concern is whether GPE and variance weighting are merely two independent tricks bundled for publication convenience. Our mechanism analysis reveals a deeper connection: \emph{network position is the common root cause of both problems they address.}
+
+In networked observational data, a node's structural position simultaneously affects three quantities:
+\begin{enumerate}
+    \item \emph{Treatment assignment}: nodes in certain communities or structural roles are more likely to receive treatment (the confounding path);
+    \item \emph{Potential outcomes}: the treatment effect itself varies by position---community members may amplify or dampen each other's responses (the heterogeneity path);
+    \item \emph{Outcome noise}: behavior volatility is position-dependent---hub users with many connections exhibit more erratic engagement patterns than peripheral users (the heteroscedasticity path).
+\end{enumerate}
+
+GPE addresses paths (1) and (2) by making positional information explicitly available to the model's prediction heads (confirmed by the propensity AUC improvement in Table~\ref{tab:propensity}). Variance weighting addresses path (3) by down-weighting samples whose outcomes are inherently noisy, regardless of the model's structural awareness.
+
+This dual-root structure explains the empirical synergy pattern observed in Table~\ref{tab:var}: at low noise ($\rho{=}5$), confounding dominates and GPE alone suffices. At high noise ($\rho{=}30$), GPE amplifies both the structural signal \emph{and} the position-correlated noise---the very noise that variance weighting is designed to suppress. Their combination is synergistic precisely because they address different downstream consequences of the same underlying cause, rather than attacking the same problem from two angles. This is why GDC+GPE+Var achieves its strongest gains at $\rho{=}30$ (PEHE 2.99 vs.\ 4.31 vanilla on PubMed), where both failure modes are simultaneously active.
+
 \subsection{Practical Guidelines for RecSys Practitioners}
 
-The experimental results translate into three concrete deployment heuristics.
+The dual-root perspective translates into concrete deployment heuristics.
 
-\textbf{When to use GPE.} GPE is most effective when the social graph has meaningful community structure (Louvain modularity $> 0.3$ is a reasonable threshold). Among the architectures tested, TARNet offers the best cost-to-benefit ratio: it is simple and lacks any built-in structural mechanism, leaving the most headroom for GPE. Crucially, GPE is a pure preprocessing step---it can be bolted onto any T-learner deployed in production \emph{without} retraining the backbone, which is a significant advantage over full architectural overhauls.
+\textbf{When to use GPE.} GPE is most effective when the social graph has meaningful community structure (Louvain modularity $> 0.3$ is a reasonable threshold) or when treatment assignment correlates with network topology. Among the architectures tested, TARNet offers the best cost-to-benefit ratio: it is simple and lacks any built-in structural mechanism, leaving the most headroom for GPE. Crucially, GPE is a pure preprocessing step---it can be bolted onto any T-learner deployed in production \emph{without} retraining the backbone, which is a significant advantage over full architectural overhauls.
 
 \textbf{When to use variance weighting.} The learned $\log\sigma^2$ head earns its keep on continuous outcomes with genuine noise heterogeneity (revenue, dwell time, spend). For binary outcomes, the analytical Bernoulli variance $\sigma^2 = \mu(1-\mu)$ is a lightweight substitute that primarily regularizes training stability rather than shifting mean performance; do not expect it to move Qini on balanced datasets like Criteo.
 
-\textbf{When to combine both.} Under substantial outcome noise (high $\rho$), GPE alone can overfit to noisy pseudo-labels, a failure mode variance weighting directly counteracts by down-weighting unreliable samples. Their combination is therefore most valuable in volatile user populations or low signal-to-noise recommendation settings. The exact combination to deploy (GPE only, Var only, or both) should be decided by the base architecture: Table~\ref{tab:ablation} shows the pattern clearly.
+\textbf{When to combine both.} The dual-root analysis predicts that combining both modules is most valuable when \emph{both} network confounding and outcome noise are substantial---precisely the high-noise, community-structured settings common in social recommendation. Under such conditions, GPE alone risks overfitting to noisy pseudo-labels (a failure mode we observe empirically), while variance weighting alone cannot correct the structural confounding bias. Only the combination addresses both failure modes. The exact configuration (GPE only, Var only, or both) should be decided by the base architecture and noise regime: Table~\ref{tab:ablation} shows that the optimal plug-in combination is model-dependent.
 
 \subsection{Design Choices and Robustness}
 
