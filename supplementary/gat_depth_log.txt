@@ -1,0 +1,403 @@
+
+============================================================
+  GAT depth=1, seed=0, gnn_hidden=[128]
+============================================================
+[ep   0] loss=2.7842  val_pehe=4.8985  val_qini=-0.0528  test_pehe=4.8948  test_qini=-0.0556
+[ep  10] loss=1.8069  val_pehe=3.6488  val_qini=0.5085  test_pehe=3.5140  test_qini=0.5174
+[ep  20] loss=1.2655  val_pehe=2.9401  val_qini=0.6063  test_pehe=2.9480  test_qini=0.6119
+[ep  30] loss=0.9106  val_pehe=2.3999  val_qini=0.6235  test_pehe=2.4256  test_qini=0.6428
+[ep  40] loss=0.6122  val_pehe=2.1609  val_qini=0.6569  test_pehe=2.1908  test_qini=0.6565
+[ep  50] loss=0.2923  val_pehe=2.3619  val_qini=0.6528  test_pehe=2.3971  test_qini=0.6487
+[ep  60] loss=0.1405  val_pehe=2.7648  val_qini=0.6347  test_pehe=2.8277  test_qini=0.6397
+[ep  70] loss=0.0779  val_pehe=2.9643  val_qini=0.6259  test_pehe=3.0363  test_qini=0.6335
+[ep  80] loss=0.0451  val_pehe=3.0935  val_qini=0.6207  test_pehe=3.1616  test_qini=0.6274
+[ep  90] loss=0.0442  val_pehe=3.4317  val_qini=0.6164  test_pehe=3.5056  test_qini=0.6206
+[ep 100] loss=0.0215  val_pehe=4.0917  val_qini=0.6059  test_pehe=4.2037  test_qini=0.6152
+[ep 110] loss=0.0296  val_pehe=5.0241  val_qini=0.5947  test_pehe=5.1442  test_qini=0.6078
+[ep 120] loss=0.0377  val_pehe=6.3803  val_qini=0.5917  test_pehe=6.4555  test_qini=0.6099
+[ep 130] loss=0.0062  val_pehe=7.2157  val_qini=0.5863  test_pehe=7.2602  test_qini=0.6048
+[ep 140] loss=0.0086  val_pehe=6.7732  val_qini=0.5855  test_pehe=6.7748  test_qini=0.6000
+[ep 150] loss=0.0023  val_pehe=6.8656  val_qini=0.5816  test_pehe=6.8694  test_qini=0.5963
+[ep 160] loss=0.0016  val_pehe=7.0413  val_qini=0.5803  test_pehe=7.0335  test_qini=0.5935
+[ep 170] loss=0.0008  val_pehe=7.0625  val_qini=0.5795  test_pehe=7.0369  test_qini=0.5906
+[ep 180] loss=0.0007  val_pehe=7.1550  val_qini=0.5790  test_pehe=7.1210  test_qini=0.5879
+[ep 190] loss=0.0005  val_pehe=7.2538  val_qini=0.5776  test_pehe=7.2260  test_qini=0.5845
+[ep 199] loss=0.0004  val_pehe=7.3575  val_qini=0.5757  test_pehe=7.3446  test_qini=0.5810
+  -> test_pehe=2.1908  test_qini=0.6565  (31s)
+
+============================================================
+  GAT depth=1, seed=1, gnn_hidden=[128]
+============================================================
+[ep   0] loss=2.6826  val_pehe=4.6750  val_qini=0.0816  test_pehe=4.8605  test_qini=0.0879
+[ep  10] loss=1.8595  val_pehe=3.8879  val_qini=0.4405  test_pehe=3.8557  test_qini=0.4610
+[ep  20] loss=1.2446  val_pehe=3.0933  val_qini=0.5742  test_pehe=3.0917  test_qini=0.5645
+[ep  30] loss=0.8660  val_pehe=2.5701  val_qini=0.6051  test_pehe=2.5486  test_qini=0.5910
+[ep  40] loss=0.5721  val_pehe=2.2953  val_qini=0.6181  test_pehe=2.3148  test_qini=0.5979
+[ep  50] loss=0.2523  val_pehe=2.5543  val_qini=0.6129  test_pehe=2.6485  test_qini=0.5967
+[ep  60] loss=0.1115  val_pehe=3.1164  val_qini=0.6003  test_pehe=3.2010  test_qini=0.5846
+[ep  70] loss=0.0589  val_pehe=3.4582  val_qini=0.5931  test_pehe=3.5643  test_qini=0.5781
+[ep  80] loss=0.0369  val_pehe=3.8874  val_qini=0.5869  test_pehe=3.9645  test_qini=0.5695
+[ep  90] loss=0.0536  val_pehe=4.9369  val_qini=0.5788  test_pehe=4.9358  test_qini=0.5619
+[ep 100] loss=0.0147  val_pehe=6.0577  val_qini=0.5773  test_pehe=6.0667  test_qini=0.5606
+[ep 110] loss=0.0214  val_pehe=7.7862  val_qini=0.5780  test_pehe=7.6993  test_qini=0.5608
+[ep 120] loss=0.0076  val_pehe=7.9495  val_qini=0.5762  test_pehe=7.8047  test_qini=0.5621
+[ep 130] loss=0.0042  val_pehe=8.0881  val_qini=0.5771  test_pehe=7.9719  test_qini=0.5628
+[ep 140] loss=0.0020  val_pehe=7.9351  val_qini=0.5755  test_pehe=7.8061  test_qini=0.5614
+[ep 150] loss=0.0010  val_pehe=7.8065  val_qini=0.5732  test_pehe=7.6295  test_qini=0.5604
+[ep 160] loss=0.0007  val_pehe=7.7967  val_qini=0.5724  test_pehe=7.6582  test_qini=0.5597
+[ep 170] loss=0.0068  val_pehe=7.2301  val_qini=0.5704  test_pehe=7.1392  test_qini=0.5584
+[ep 180] loss=0.0009  val_pehe=7.6014  val_qini=0.5714  test_pehe=7.4282  test_qini=0.5615
+[ep 190] loss=0.0015  val_pehe=7.7574  val_qini=0.5705  test_pehe=7.5791  test_qini=0.5604
+[ep 199] loss=0.0012  val_pehe=8.4181  val_qini=0.5718  test_pehe=8.2022  test_qini=0.5593
+  -> test_pehe=2.3148  test_qini=0.5979  (30s)
+
+============================================================
+  GAT depth=1, seed=2, gnn_hidden=[128]
+============================================================
+[ep   0] loss=2.8024  val_pehe=4.7840  val_qini=-0.0133  test_pehe=4.9701  test_qini=-0.0276
+[ep  10] loss=1.8480  val_pehe=3.8026  val_qini=0.4871  test_pehe=3.9054  test_qini=0.4878
+[ep  20] loss=1.2534  val_pehe=2.7614  val_qini=0.5973  test_pehe=2.8034  test_qini=0.5838
+[ep  30] loss=0.9173  val_pehe=2.2234  val_qini=0.6254  test_pehe=2.2852  test_qini=0.6220
+[ep  40] loss=0.6014  val_pehe=2.2056  val_qini=0.6390  test_pehe=2.2430  test_qini=0.6377
+[ep  50] loss=0.2999  val_pehe=2.5363  val_qini=0.6394  test_pehe=2.5331  test_qini=0.6283
+[ep  60] loss=0.1204  val_pehe=3.0194  val_qini=0.6300  test_pehe=3.0522  test_qini=0.6171
+[ep  70] loss=0.0587  val_pehe=3.2046  val_qini=0.6225  test_pehe=3.2083  test_qini=0.6064
+[ep  80] loss=0.0344  val_pehe=3.6699  val_qini=0.6101  test_pehe=3.6300  test_qini=0.6002
+[ep  90] loss=0.0365  val_pehe=4.1771  val_qini=0.6024  test_pehe=4.0861  test_qini=0.5934
+[ep 100] loss=0.0190  val_pehe=5.8956  val_qini=0.5942  test_pehe=5.6915  test_qini=0.5875
+[ep 110] loss=0.0492  val_pehe=8.5303  val_qini=0.5841  test_pehe=8.0231  test_qini=0.5794
+[ep 120] loss=0.0184  val_pehe=12.7241  val_qini=0.5851  test_pehe=11.8353  test_qini=0.5748
+[ep 130] loss=0.0155  val_pehe=11.9778  val_qini=0.5843  test_pehe=11.1872  test_qini=0.5763
+[ep 140] loss=0.0050  val_pehe=11.3650  val_qini=0.5836  test_pehe=10.5686  test_qini=0.5790
+[ep 150] loss=0.0025  val_pehe=11.2010  val_qini=0.5813  test_pehe=10.5784  test_qini=0.5797
+[ep 160] loss=0.0013  val_pehe=11.1609  val_qini=0.5806  test_pehe=10.7516  test_qini=0.5798
+[ep 170] loss=0.0007  val_pehe=11.1219  val_qini=0.5791  test_pehe=10.6459  test_qini=0.5794
+[ep 180] loss=0.0004  val_pehe=11.2473  val_qini=0.5777  test_pehe=10.8055  test_qini=0.5778
+[ep 190] loss=0.0003  val_pehe=11.4008  val_qini=0.5770  test_pehe=10.9673  test_qini=0.5774
+[ep 199] loss=0.0002  val_pehe=11.5283  val_qini=0.5758  test_pehe=11.1174  test_qini=0.5763
+  -> test_pehe=2.2430  test_qini=0.6377  (30s)
+
+============================================================
+  GAT depth=2, seed=0, gnn_hidden=[256, 128]
+============================================================
+[ep   0] loss=2.8618  val_pehe=4.9323  val_qini=-0.0026  test_pehe=4.9343  test_qini=-0.0323
+[ep  10] loss=1.5210  val_pehe=2.7974  val_qini=0.6082  test_pehe=2.7952  test_qini=0.6030
+[ep  20] loss=1.0945  val_pehe=2.0047  val_qini=0.6604  test_pehe=2.0375  test_qini=0.6658
+[ep  30] loss=0.8737  val_pehe=1.8536  val_qini=0.6780  test_pehe=1.8414  test_qini=0.6715
+[ep  40] loss=0.6765  val_pehe=1.8871  val_qini=0.6849  test_pehe=1.9085  test_qini=0.6737
+[ep  50] loss=0.3438  val_pehe=2.1296  val_qini=0.6709  test_pehe=2.1148  test_qini=0.6726
+[ep  60] loss=0.1436  val_pehe=2.6813  val_qini=0.6526  test_pehe=2.6705  test_qini=0.6492
+[ep  70] loss=0.0740  val_pehe=4.2335  val_qini=0.6082  test_pehe=4.2536  test_qini=0.5994
+[ep  80] loss=0.1806  val_pehe=6.5040  val_qini=0.5575  test_pehe=6.2354  test_qini=0.5349
+[ep  90] loss=0.1196  val_pehe=5.2477  val_qini=0.6305  test_pehe=4.2715  test_qini=0.6244
+[ep 100] loss=0.0515  val_pehe=13.8043  val_qini=0.5575  test_pehe=11.5696  test_qini=0.5709
+[ep 110] loss=0.1252  val_pehe=20.3647  val_qini=0.6195  test_pehe=21.8041  test_qini=0.6064
+[ep 120] loss=0.3476  val_pehe=116.9004  val_qini=0.6167  test_pehe=114.7169  test_qini=0.6122
+[ep 130] loss=0.4702  val_pehe=59.5686  val_qini=0.6486  test_pehe=55.4185  test_qini=0.6304
+[ep 140] loss=0.8069  val_pehe=137.8983  val_qini=0.6186  test_pehe=161.0761  test_qini=0.6176
+[ep 150] loss=0.7004  val_pehe=84.8128  val_qini=0.6136  test_pehe=95.9524  test_qini=0.6171
+[ep 160] loss=0.5286  val_pehe=130.0283  val_qini=0.6304  test_pehe=137.2966  test_qini=0.6276
+[ep 170] loss=0.3422  val_pehe=125.8246  val_qini=0.6332  test_pehe=127.4338  test_qini=0.6338
+[ep 180] loss=0.1460  val_pehe=130.7999  val_qini=0.6318  test_pehe=128.8413  test_qini=0.6283
+[ep 190] loss=0.0619  val_pehe=180.8654  val_qini=0.6240  test_pehe=176.4634  test_qini=0.6267
+[ep 199] loss=0.0426  val_pehe=250.7206  val_qini=0.6112  test_pehe=247.6034  test_qini=0.6139
+  -> test_pehe=1.8414  test_qini=0.6715  (33s)
+
+============================================================
+  GAT depth=2, seed=1, gnn_hidden=[256, 128]
+============================================================
+[ep   0] loss=2.7835  val_pehe=4.7364  val_qini=0.0586  test_pehe=4.9260  test_qini=0.0452
+[ep  10] loss=1.5692  val_pehe=3.3470  val_qini=0.5746  test_pehe=3.3082  test_qini=0.5658
+[ep  20] loss=1.1112  val_pehe=2.0287  val_qini=0.6100  test_pehe=2.0003  test_qini=0.6023
+[ep  30] loss=0.9024  val_pehe=1.7634  val_qini=0.6286  test_pehe=1.6907  test_qini=0.6168
+[ep  40] loss=0.6442  val_pehe=1.9697  val_qini=0.6276  test_pehe=1.9561  test_qini=0.6145
+[ep  50] loss=0.3567  val_pehe=2.3800  val_qini=0.6203  test_pehe=2.4117  test_qini=0.6058
+[ep  60] loss=0.1745  val_pehe=3.0006  val_qini=0.6185  test_pehe=3.1097  test_qini=0.6008
+[ep  70] loss=0.0953  val_pehe=3.9131  val_qini=0.5986  test_pehe=3.9943  test_qini=0.5852
+[ep  80] loss=0.0411  val_pehe=5.4120  val_qini=0.5691  test_pehe=5.5064  test_qini=0.5588
+[ep  90] loss=0.0303  val_pehe=5.0805  val_qini=0.5872  test_pehe=5.0577  test_qini=0.5720
+[ep 100] loss=0.0174  val_pehe=6.1532  val_qini=0.5821  test_pehe=6.4325  test_qini=0.5642
+[ep 110] loss=0.0071  val_pehe=5.7744  val_qini=0.5768  test_pehe=5.9970  test_qini=0.5620
+[ep 120] loss=0.0029  val_pehe=7.2910  val_qini=0.5755  test_pehe=7.6712  test_qini=0.5632
+[ep 130] loss=0.0015  val_pehe=8.0669  val_qini=0.5755  test_pehe=8.4363  test_qini=0.5618
+[ep 140] loss=0.0009  val_pehe=9.4782  val_qini=0.5754  test_pehe=10.0597  test_qini=0.5626
+[ep 150] loss=0.0005  val_pehe=11.0393  val_qini=0.5765  test_pehe=11.7315  test_qini=0.5641
+[ep 160] loss=0.0081  val_pehe=13.7488  val_qini=0.5788  test_pehe=14.6837  test_qini=0.5651
+[ep 170] loss=0.0022  val_pehe=6.4797  val_qini=0.5804  test_pehe=6.5520  test_qini=0.5666
+[ep 180] loss=0.0012  val_pehe=6.0568  val_qini=0.5710  test_pehe=6.1945  test_qini=0.5588
+[ep 190] loss=0.0007  val_pehe=5.9221  val_qini=0.5696  test_pehe=6.0445  test_qini=0.5597
+[ep 199] loss=0.0004  val_pehe=6.1348  val_qini=0.5678  test_pehe=6.3192  test_qini=0.5558
+  -> test_pehe=1.6907  test_qini=0.6168  (33s)
+
+============================================================
+  GAT depth=2, seed=2, gnn_hidden=[256, 128]
+============================================================
+[ep   0] loss=2.7163  val_pehe=4.7108  val_qini=0.0894  test_pehe=4.8787  test_qini=0.0952
+[ep  10] loss=1.4190  val_pehe=3.0335  val_qini=0.6198  test_pehe=3.0903  test_qini=0.5991
+[ep  20] loss=1.0361  val_pehe=1.7095  val_qini=0.6607  test_pehe=1.7797  test_qini=0.6611
+[ep  30] loss=0.8812  val_pehe=1.7664  val_qini=0.6735  test_pehe=1.8522  test_qini=0.6643
+[ep  40] loss=0.6909  val_pehe=2.0280  val_qini=0.6754  test_pehe=2.1333  test_qini=0.6552
+[ep  50] loss=0.6590  val_pehe=2.3017  val_qini=0.6619  test_pehe=2.4811  test_qini=0.6359
+[ep  60] loss=0.4273  val_pehe=2.7537  val_qini=0.6650  test_pehe=2.9131  test_qini=0.6293
+[ep  70] loss=0.1711  val_pehe=3.5038  val_qini=0.6498  test_pehe=3.5976  test_qini=0.6103
+[ep  80] loss=0.0489  val_pehe=4.7479  val_qini=0.6398  test_pehe=4.7911  test_qini=0.6025
+[ep  90] loss=0.0187  val_pehe=5.1004  val_qini=0.6335  test_pehe=5.2021  test_qini=0.5966
+[ep 100] loss=0.0093  val_pehe=4.4879  val_qini=0.6255  test_pehe=4.6120  test_qini=0.5951
+[ep 110] loss=0.0051  val_pehe=4.6967  val_qini=0.6309  test_pehe=4.8081  test_qini=0.5958
+[ep 120] loss=0.0024  val_pehe=4.7267  val_qini=0.6286  test_pehe=4.8321  test_qini=0.5948
+[ep 130] loss=0.0012  val_pehe=4.7941  val_qini=0.6268  test_pehe=4.9080  test_qini=0.5922
+[ep 140] loss=0.0007  val_pehe=4.8154  val_qini=0.6265  test_pehe=4.9237  test_qini=0.5919
+[ep 150] loss=0.0004  val_pehe=4.8990  val_qini=0.6255  test_pehe=5.0046  test_qini=0.5907
+[ep 160] loss=0.0061  val_pehe=4.8310  val_qini=0.6233  test_pehe=4.9222  test_qini=0.5893
+[ep 170] loss=0.0057  val_pehe=4.4534  val_qini=0.6311  test_pehe=4.5829  test_qini=0.5968
+[ep 180] loss=0.0021  val_pehe=4.4563  val_qini=0.6313  test_pehe=4.5843  test_qini=0.5954
+[ep 190] loss=0.0005  val_pehe=4.4687  val_qini=0.6325  test_pehe=4.6025  test_qini=0.5957
+[ep 199] loss=0.0004  val_pehe=4.4750  val_qini=0.6328  test_pehe=4.6043  test_qini=0.5958
+  -> test_pehe=1.7797  test_qini=0.6611  (33s)
+
+============================================================
+  GAT depth=3, seed=0, gnn_hidden=[256, 128, 128]
+============================================================
+[ep   0] loss=2.7906  val_pehe=4.7999  val_qini=0.2072  test_pehe=4.8032  test_qini=0.2157
+[ep  10] loss=1.7638  val_pehe=3.7879  val_qini=0.5665  test_pehe=3.7571  test_qini=0.5742
+[ep  20] loss=1.0436  val_pehe=2.0947  val_qini=0.6621  test_pehe=2.1322  test_qini=0.6612
+[ep  30] loss=0.8609  val_pehe=1.7545  val_qini=0.6757  test_pehe=1.7716  test_qini=0.6820
+[ep  40] loss=0.5502  val_pehe=2.0141  val_qini=0.6717  test_pehe=2.0322  test_qini=0.6745
+[ep  50] loss=0.3235  val_pehe=2.2987  val_qini=0.6566  test_pehe=2.2525  test_qini=0.6698
+[ep  60] loss=0.1333  val_pehe=2.9356  val_qini=0.6526  test_pehe=2.8641  test_qini=0.6619
+[ep  70] loss=0.0573  val_pehe=3.2702  val_qini=0.6354  test_pehe=3.1715  test_qini=0.6479
+[ep  80] loss=0.0344  val_pehe=3.4592  val_qini=0.6452  test_pehe=3.3186  test_qini=0.6523
+[ep  90] loss=0.0138  val_pehe=3.4757  val_qini=0.6415  test_pehe=3.3383  test_qini=0.6470
+[ep 100] loss=0.0067  val_pehe=3.7733  val_qini=0.6418  test_pehe=3.6381  test_qini=0.6497
+[ep 110] loss=0.0033  val_pehe=3.5883  val_qini=0.6380  test_pehe=3.4583  test_qini=0.6454
+[ep 120] loss=0.0017  val_pehe=3.7063  val_qini=0.6398  test_pehe=3.5809  test_qini=0.6466
+[ep 130] loss=0.0012  val_pehe=3.6893  val_qini=0.6384  test_pehe=3.5703  test_qini=0.6456
+[ep 140] loss=0.0008  val_pehe=3.7178  val_qini=0.6381  test_pehe=3.5986  test_qini=0.6453
+[ep 150] loss=0.0006  val_pehe=3.7181  val_qini=0.6385  test_pehe=3.6007  test_qini=0.6463
+[ep 160] loss=0.0005  val_pehe=3.7244  val_qini=0.6383  test_pehe=3.6066  test_qini=0.6462
+[ep 170] loss=0.0004  val_pehe=3.7320  val_qini=0.6379  test_pehe=3.6127  test_qini=0.6462
+[ep 180] loss=0.0004  val_pehe=3.7444  val_qini=0.6374  test_pehe=3.6234  test_qini=0.6461
+[ep 190] loss=0.0020  val_pehe=3.8132  val_qini=0.6361  test_pehe=3.6875  test_qini=0.6454
+[ep 199] loss=0.0011  val_pehe=3.7839  val_qini=0.6362  test_pehe=3.6579  test_qini=0.6461
+  -> test_pehe=1.7716  test_qini=0.6820  (34s)
+
+============================================================
+  GAT depth=3, seed=1, gnn_hidden=[256, 128, 128]
+============================================================
+[ep   0] loss=2.7155  val_pehe=4.6640  val_qini=0.0071  test_pehe=4.8430  test_qini=-0.0064
+[ep  10] loss=1.7497  val_pehe=3.9042  val_qini=0.4996  test_pehe=3.7440  test_qini=0.5237
+[ep  20] loss=1.1446  val_pehe=2.0350  val_qini=0.6167  test_pehe=1.9734  test_qini=0.6063
+[ep  30] loss=0.9398  val_pehe=1.8255  val_qini=0.6372  test_pehe=1.7772  test_qini=0.6269
+[ep  40] loss=0.6939  val_pehe=2.1259  val_qini=0.6310  test_pehe=2.1020  test_qini=0.6170
+[ep  50] loss=0.4008  val_pehe=2.3849  val_qini=0.6241  test_pehe=2.3624  test_qini=0.6068
+[ep  60] loss=0.1166  val_pehe=3.0531  val_qini=0.6132  test_pehe=3.0612  test_qini=0.5980
+[ep  70] loss=0.0406  val_pehe=2.9517  val_qini=0.6075  test_pehe=2.9788  test_qini=0.5843
+[ep  80] loss=0.0224  val_pehe=2.9528  val_qini=0.6148  test_pehe=2.9743  test_qini=0.5951
+[ep  90] loss=0.0094  val_pehe=2.9519  val_qini=0.6088  test_pehe=2.9606  test_qini=0.5919
+[ep 100] loss=0.0053  val_pehe=3.0474  val_qini=0.6093  test_pehe=3.0449  test_qini=0.5935
+[ep 110] loss=0.0030  val_pehe=3.0185  val_qini=0.6087  test_pehe=3.0099  test_qini=0.5932
+[ep 120] loss=0.0015  val_pehe=3.0606  val_qini=0.6091  test_pehe=3.0516  test_qini=0.5933
+[ep 130] loss=0.0008  val_pehe=3.0480  val_qini=0.6081  test_pehe=3.0345  test_qini=0.5928
+[ep 140] loss=0.0005  val_pehe=3.0623  val_qini=0.6081  test_pehe=3.0467  test_qini=0.5930
+[ep 150] loss=0.0004  val_pehe=3.0752  val_qini=0.6080  test_pehe=3.0588  test_qini=0.5928
+[ep 160] loss=0.0015  val_pehe=3.0920  val_qini=0.6080  test_pehe=3.0807  test_qini=0.5927
+[ep 170] loss=0.0019  val_pehe=3.1208  val_qini=0.6116  test_pehe=3.1244  test_qini=0.5966
+[ep 180] loss=0.0060  val_pehe=2.9741  val_qini=0.6107  test_pehe=2.9529  test_qini=0.5950
+[ep 190] loss=0.0006  val_pehe=2.9644  val_qini=0.6095  test_pehe=2.9394  test_qini=0.5934
+[ep 199] loss=0.0008  val_pehe=2.9993  val_qini=0.6113  test_pehe=2.9815  test_qini=0.5955
+  -> test_pehe=1.7772  test_qini=0.6269  (34s)
+
+============================================================
+  GAT depth=3, seed=2, gnn_hidden=[256, 128, 128]
+============================================================
+[ep   0] loss=2.6764  val_pehe=4.7968  val_qini=0.2029  test_pehe=4.9346  test_qini=0.2123
+[ep  10] loss=1.6530  val_pehe=3.2414  val_qini=0.5476  test_pehe=3.3483  test_qini=0.5533
+[ep  20] loss=1.0459  val_pehe=1.7584  val_qini=0.6578  test_pehe=1.8301  test_qini=0.6448
+[ep  30] loss=0.8993  val_pehe=1.6743  val_qini=0.6742  test_pehe=1.7142  test_qini=0.6609
+[ep  40] loss=0.6892  val_pehe=2.0288  val_qini=0.6694  test_pehe=2.1005  test_qini=0.6505
+[ep  50] loss=0.4121  val_pehe=2.9796  val_qini=0.6659  test_pehe=3.0759  test_qini=0.6330
+[ep  60] loss=0.1468  val_pehe=2.6192  val_qini=0.6583  test_pehe=2.6971  test_qini=0.6304
+[ep  70] loss=0.0518  val_pehe=3.1358  val_qini=0.6527  test_pehe=3.2403  test_qini=0.6222
+[ep  80] loss=0.0216  val_pehe=3.1021  val_qini=0.6489  test_pehe=3.1812  test_qini=0.6208
+[ep  90] loss=0.0098  val_pehe=3.0818  val_qini=0.6483  test_pehe=3.1753  test_qini=0.6179
+[ep 100] loss=0.0047  val_pehe=3.1692  val_qini=0.6483  test_pehe=3.2490  test_qini=0.6184
+[ep 110] loss=0.0027  val_pehe=3.1954  val_qini=0.6482  test_pehe=3.2796  test_qini=0.6185
+[ep 120] loss=0.0024  val_pehe=3.1534  val_qini=0.6483  test_pehe=3.2373  test_qini=0.6178
+[ep 130] loss=0.0010  val_pehe=3.1752  val_qini=0.6482  test_pehe=3.2604  test_qini=0.6181
+[ep 140] loss=0.0040  val_pehe=3.2366  val_qini=0.6484  test_pehe=3.3242  test_qini=0.6180
+[ep 150] loss=0.0035  val_pehe=3.1277  val_qini=0.6493  test_pehe=3.2086  test_qini=0.6185
+[ep 160] loss=0.0008  val_pehe=3.1544  val_qini=0.6492  test_pehe=3.2368  test_qini=0.6183
+[ep 170] loss=0.0007  val_pehe=3.1764  val_qini=0.6488  test_pehe=3.2608  test_qini=0.6183
+[ep 180] loss=0.0006  val_pehe=3.1608  val_qini=0.6490  test_pehe=3.2418  test_qini=0.6183
+[ep 190] loss=0.0009  val_pehe=3.1677  val_qini=0.6489  test_pehe=3.2461  test_qini=0.6182
+[ep 199] loss=0.0029  val_pehe=3.1637  val_qini=0.6515  test_pehe=3.2353  test_qini=0.6216
+  -> test_pehe=1.7142  test_qini=0.6609  (34s)
+
+============================================================
+  GAT depth=5, seed=0, gnn_hidden=[256, 128, 128, 128, 128]
+============================================================
+[ep   0] loss=2.7770  val_pehe=4.8398  val_qini=0.0963  test_pehe=4.8501  test_qini=0.0687
+[ep  10] loss=1.9549  val_pehe=3.9126  val_qini=0.5097  test_pehe=3.8677  test_qini=0.5003
+[ep  20] loss=1.3249  val_pehe=2.8440  val_qini=0.6084  test_pehe=2.8232  test_qini=0.5967
+[ep  30] loss=1.1344  val_pehe=2.3500  val_qini=0.6530  test_pehe=2.3915  test_qini=0.6490
+[ep  40] loss=0.8271  val_pehe=2.2941  val_qini=0.6537  test_pehe=2.3083  test_qini=0.6614
+[ep  50] loss=0.5528  val_pehe=2.5597  val_qini=0.6427  test_pehe=2.5480  test_qini=0.6397
+[ep  60] loss=0.4096  val_pehe=2.8123  val_qini=0.6340  test_pehe=2.8064  test_qini=0.6330
+[ep  70] loss=0.1661  val_pehe=2.9044  val_qini=0.6232  test_pehe=2.9229  test_qini=0.6180
+[ep  80] loss=0.0684  val_pehe=3.1022  val_qini=0.6216  test_pehe=3.1254  test_qini=0.6155
+[ep  90] loss=0.0410  val_pehe=3.3265  val_qini=0.6246  test_pehe=3.3367  test_qini=0.6192
+[ep 100] loss=0.0268  val_pehe=3.0942  val_qini=0.6157  test_pehe=3.1255  test_qini=0.6118
+[ep 110] loss=0.0157  val_pehe=3.1145  val_qini=0.6189  test_pehe=3.1345  test_qini=0.6129
+[ep 120] loss=0.0097  val_pehe=3.1354  val_qini=0.6190  test_pehe=3.1502  test_qini=0.6144
+[ep 130] loss=0.0070  val_pehe=3.1212  val_qini=0.6183  test_pehe=3.1373  test_qini=0.6138
+[ep 140] loss=0.0053  val_pehe=3.1327  val_qini=0.6181  test_pehe=3.1498  test_qini=0.6143
+[ep 150] loss=0.0043  val_pehe=3.1526  val_qini=0.6176  test_pehe=3.1771  test_qini=0.6146
+[ep 160] loss=0.0191  val_pehe=2.9640  val_qini=0.6237  test_pehe=2.9914  test_qini=0.6201
+[ep 170] loss=0.0071  val_pehe=3.0110  val_qini=0.6199  test_pehe=3.0385  test_qini=0.6183
+[ep 180] loss=0.0040  val_pehe=3.1078  val_qini=0.6200  test_pehe=3.1153  test_qini=0.6186
+[ep 190] loss=0.0031  val_pehe=3.0733  val_qini=0.6198  test_pehe=3.0924  test_qini=0.6194
+[ep 199] loss=0.0022  val_pehe=3.0597  val_qini=0.6196  test_pehe=3.0798  test_qini=0.6187
+  -> test_pehe=2.3083  test_qini=0.6614  (37s)
+
+============================================================
+  GAT depth=5, seed=1, gnn_hidden=[256, 128, 128, 128, 128]
+============================================================
+[ep   0] loss=2.7701  val_pehe=5.3601  val_qini=-0.0559  test_pehe=5.5006  test_qini=-0.0952
+[ep  10] loss=1.8667  val_pehe=3.8735  val_qini=0.4270  test_pehe=3.7580  test_qini=0.4767
+[ep  20] loss=1.3157  val_pehe=2.7950  val_qini=0.5649  test_pehe=2.6933  test_qini=0.5760
+[ep  30] loss=0.9855  val_pehe=2.3039  val_qini=0.6096  test_pehe=2.2753  test_qini=0.6084
+[ep  40] loss=0.7306  val_pehe=2.3420  val_qini=0.6038  test_pehe=2.3191  test_qini=0.6013
+[ep  50] loss=0.5730  val_pehe=2.7115  val_qini=0.5957  test_pehe=2.6722  test_qini=0.5909
+[ep  60] loss=0.4072  val_pehe=2.9237  val_qini=0.5935  test_pehe=2.8801  test_qini=0.5846
+[ep  70] loss=0.1412  val_pehe=3.1899  val_qini=0.5849  test_pehe=3.1733  test_qini=0.5856
+[ep  80] loss=0.0584  val_pehe=3.3558  val_qini=0.5884  test_pehe=3.3843  test_qini=0.5826
+[ep  90] loss=0.0263  val_pehe=3.4778  val_qini=0.5878  test_pehe=3.5217  test_qini=0.5829
+[ep 100] loss=0.0181  val_pehe=3.3927  val_qini=0.5881  test_pehe=3.4414  test_qini=0.5840
+[ep 110] loss=0.0102  val_pehe=3.3724  val_qini=0.5869  test_pehe=3.4236  test_qini=0.5838
+[ep 120] loss=0.0067  val_pehe=3.3924  val_qini=0.5868  test_pehe=3.4434  test_qini=0.5837
+[ep 130] loss=0.0047  val_pehe=3.4193  val_qini=0.5877  test_pehe=3.4751  test_qini=0.5849
+[ep 140] loss=0.0036  val_pehe=3.4302  val_qini=0.5878  test_pehe=3.4858  test_qini=0.5846
+[ep 150] loss=0.0028  val_pehe=3.4542  val_qini=0.5880  test_pehe=3.5120  test_qini=0.5852
+[ep 160] loss=0.0022  val_pehe=3.4704  val_qini=0.5882  test_pehe=3.5296  test_qini=0.5853
+[ep 170] loss=0.0019  val_pehe=3.4896  val_qini=0.5888  test_pehe=3.5487  test_qini=0.5854
+[ep 180] loss=0.0043  val_pehe=3.4846  val_qini=0.5901  test_pehe=3.5396  test_qini=0.5855
+[ep 190] loss=0.0019  val_pehe=3.4920  val_qini=0.5900  test_pehe=3.5567  test_qini=0.5857
+[ep 199] loss=0.0015  val_pehe=3.4992  val_qini=0.5898  test_pehe=3.5632  test_qini=0.5855
+  -> test_pehe=2.2753  test_qini=0.6084  (37s)
+
+============================================================
+  GAT depth=5, seed=2, gnn_hidden=[256, 128, 128, 128, 128]
+============================================================
+[ep   0] loss=2.7268  val_pehe=5.8324  val_qini=-0.0148  test_pehe=5.9354  test_qini=-0.0011
+[ep  10] loss=1.9422  val_pehe=4.4485  val_qini=0.4869  test_pehe=4.5040  test_qini=0.5026
+[ep  20] loss=1.3054  val_pehe=2.7534  val_qini=0.5954  test_pehe=2.8364  test_qini=0.5937
+[ep  30] loss=1.0401  val_pehe=2.0132  val_qini=0.6444  test_pehe=2.0958  test_qini=0.6405
+[ep  40] loss=0.8227  val_pehe=2.2624  val_qini=0.6518  test_pehe=2.3509  test_qini=0.6432
+[ep  50] loss=0.7060  val_pehe=2.9991  val_qini=0.6405  test_pehe=3.1484  test_qini=0.6178
+[ep  60] loss=0.5155  val_pehe=2.9839  val_qini=0.6262  test_pehe=3.0869  test_qini=0.6118
+[ep  70] loss=0.3460  val_pehe=3.4283  val_qini=0.6080  test_pehe=3.5406  test_qini=0.5957
+[ep  80] loss=0.0948  val_pehe=3.7379  val_qini=0.5952  test_pehe=3.8222  test_qini=0.5891
+[ep  90] loss=0.0474  val_pehe=3.8327  val_qini=0.6021  test_pehe=3.8992  test_qini=0.5909
+[ep 100] loss=0.0280  val_pehe=3.7419  val_qini=0.5968  test_pehe=3.8030  test_qini=0.5883
+[ep 110] loss=0.0158  val_pehe=3.8516  val_qini=0.5982  test_pehe=3.9109  test_qini=0.5880
+[ep 120] loss=0.0094  val_pehe=3.8086  val_qini=0.5975  test_pehe=3.8732  test_qini=0.5877
+[ep 130] loss=0.0202  val_pehe=3.6781  val_qini=0.6017  test_pehe=3.7396  test_qini=0.5923
+[ep 140] loss=0.0096  val_pehe=3.6569  val_qini=0.6001  test_pehe=3.7481  test_qini=0.5905
+[ep 150] loss=0.0041  val_pehe=3.6538  val_qini=0.6001  test_pehe=3.7462  test_qini=0.5907
+[ep 160] loss=0.0035  val_pehe=3.6144  val_qini=0.6007  test_pehe=3.7033  test_qini=0.5915
+[ep 170] loss=0.0024  val_pehe=3.6365  val_qini=0.6003  test_pehe=3.7267  test_qini=0.5912
+[ep 180] loss=0.0020  val_pehe=3.6350  val_qini=0.6000  test_pehe=3.7252  test_qini=0.5911
+[ep 190] loss=0.0015  val_pehe=3.6506  val_qini=0.5994  test_pehe=3.7403  test_qini=0.5908
+[ep 199] loss=0.0013  val_pehe=3.6595  val_qini=0.5994  test_pehe=3.7494  test_qini=0.5908
+  -> test_pehe=2.0958  test_qini=0.6405  (37s)
+
+============================================================
+  GAT depth=7, seed=0, gnn_hidden=[256, 256, 128, 128, 128, 128, 128]
+============================================================
+[ep   0] loss=2.7882  val_pehe=7.0220  val_qini=0.0239  test_pehe=7.0620  test_qini=0.0048
+[ep  10] loss=2.2018  val_pehe=4.2277  val_qini=0.4530  test_pehe=4.1541  test_qini=0.4500
+[ep  20] loss=1.6192  val_pehe=3.7529  val_qini=0.5625  test_pehe=3.7620  test_qini=0.5457
+[ep  30] loss=1.3345  val_pehe=3.5131  val_qini=0.5791  test_pehe=3.5578  test_qini=0.5573
+[ep  40] loss=1.1903  val_pehe=2.9386  val_qini=0.6113  test_pehe=2.9759  test_qini=0.5885
+[ep  50] loss=1.0733  val_pehe=2.9296  val_qini=0.6168  test_pehe=2.8862  test_qini=0.6033
+[ep  60] loss=0.7274  val_pehe=3.1170  val_qini=0.6105  test_pehe=3.1031  test_qini=0.6025
+[ep  70] loss=0.7649  val_pehe=3.0856  val_qini=0.5949  test_pehe=3.0854  test_qini=0.5816
+[ep  80] loss=0.3959  val_pehe=3.2797  val_qini=0.5923  test_pehe=3.1753  test_qini=0.5945
+[ep  90] loss=0.1937  val_pehe=3.9140  val_qini=0.5946  test_pehe=3.8231  test_qini=0.5893
+[ep 100] loss=0.1457  val_pehe=3.8545  val_qini=0.5874  test_pehe=3.7442  test_qini=0.5808
+[ep 110] loss=0.0807  val_pehe=3.8493  val_qini=0.5920  test_pehe=3.7771  test_qini=0.5787
+[ep 120] loss=0.0531  val_pehe=3.8151  val_qini=0.5904  test_pehe=3.7479  test_qini=0.5771
+[ep 130] loss=0.0452  val_pehe=3.7609  val_qini=0.5945  test_pehe=3.7380  test_qini=0.5811
+[ep 140] loss=0.0374  val_pehe=3.8122  val_qini=0.5929  test_pehe=3.7810  test_qini=0.5809
+[ep 150] loss=0.0308  val_pehe=3.7986  val_qini=0.5931  test_pehe=3.7714  test_qini=0.5812
+[ep 160] loss=0.0353  val_pehe=3.7560  val_qini=0.5888  test_pehe=3.7153  test_qini=0.5770
+[ep 170] loss=0.0248  val_pehe=3.7670  val_qini=0.5947  test_pehe=3.7458  test_qini=0.5798
+[ep 180] loss=0.0197  val_pehe=3.7929  val_qini=0.5966  test_pehe=3.7817  test_qini=0.5809
+[ep 190] loss=0.0146  val_pehe=3.8279  val_qini=0.5967  test_pehe=3.8154  test_qini=0.5802
+[ep 199] loss=0.0709  val_pehe=3.7358  val_qini=0.5902  test_pehe=3.6942  test_qini=0.5786
+  -> test_pehe=2.8862  test_qini=0.6033  (40s)
+
+============================================================
+  GAT depth=7, seed=1, gnn_hidden=[256, 256, 128, 128, 128, 128, 128]
+============================================================
+[ep   0] loss=2.6723  val_pehe=25.1933  val_qini=0.0023  test_pehe=25.0501  test_qini=-0.0023
+[ep  10] loss=2.0157  val_pehe=4.4916  val_qini=0.3760  test_pehe=4.3467  test_qini=0.4342
+[ep  20] loss=1.5893  val_pehe=3.6016  val_qini=0.4768  test_pehe=3.4285  test_qini=0.5157
+[ep  30] loss=1.3554  val_pehe=3.3304  val_qini=0.5055  test_pehe=3.3011  test_qini=0.5363
+[ep  40] loss=1.1618  val_pehe=3.0878  val_qini=0.5454  test_pehe=3.0546  test_qini=0.5552
+[ep  50] loss=0.8894  val_pehe=3.1439  val_qini=0.5521  test_pehe=3.2177  test_qini=0.5535
+[ep  60] loss=0.8603  val_pehe=3.7364  val_qini=0.5478  test_pehe=3.7732  test_qini=0.5498
+[ep  70] loss=0.6043  val_pehe=3.9022  val_qini=0.5298  test_pehe=3.8706  test_qini=0.5398
+[ep  80] loss=0.4116  val_pehe=3.8162  val_qini=0.5309  test_pehe=3.8132  test_qini=0.5457
+[ep  90] loss=0.1583  val_pehe=3.8839  val_qini=0.5300  test_pehe=4.0118  test_qini=0.5366
+[ep 100] loss=0.0696  val_pehe=3.9522  val_qini=0.5224  test_pehe=4.0796  test_qini=0.5297
+[ep 110] loss=0.0489  val_pehe=3.9889  val_qini=0.5332  test_pehe=4.1576  test_qini=0.5377
+[ep 120] loss=0.0369  val_pehe=3.9429  val_qini=0.5327  test_pehe=4.0934  test_qini=0.5377
+[ep 130] loss=0.0364  val_pehe=3.9744  val_qini=0.5351  test_pehe=4.1369  test_qini=0.5393
+[ep 140] loss=0.0277  val_pehe=3.9343  val_qini=0.5341  test_pehe=4.0817  test_qini=0.5383
+[ep 150] loss=0.0437  val_pehe=4.0655  val_qini=0.5369  test_pehe=4.2334  test_qini=0.5409
+[ep 160] loss=0.0311  val_pehe=3.8919  val_qini=0.5390  test_pehe=4.0437  test_qini=0.5450
+[ep 170] loss=0.0196  val_pehe=3.8541  val_qini=0.5382  test_pehe=3.9973  test_qini=0.5438
+[ep 180] loss=0.0138  val_pehe=3.8852  val_qini=0.5381  test_pehe=4.0286  test_qini=0.5437
+[ep 190] loss=0.0106  val_pehe=3.9290  val_qini=0.5389  test_pehe=4.0729  test_qini=0.5442
+[ep 199] loss=0.0101  val_pehe=3.9718  val_qini=0.5397  test_pehe=4.1122  test_qini=0.5440
+  -> test_pehe=3.0546  test_qini=0.5552  (40s)
+
+============================================================
+  GAT depth=7, seed=2, gnn_hidden=[256, 256, 128, 128, 128, 128, 128]
+============================================================
+[ep   0] loss=2.8171  val_pehe=9.7208  val_qini=0.0034  test_pehe=9.7731  test_qini=0.0244
+[ep  10] loss=2.2945  val_pehe=4.9730  val_qini=0.3987  test_pehe=4.9725  test_qini=0.4243
+[ep  20] loss=1.6821  val_pehe=3.4740  val_qini=0.5128  test_pehe=3.4671  test_qini=0.5258
+[ep  30] loss=1.3636  val_pehe=3.1280  val_qini=0.5649  test_pehe=3.1753  test_qini=0.5688
+[ep  40] loss=1.0772  val_pehe=2.9410  val_qini=0.6056  test_pehe=2.9935  test_qini=0.5990
+[ep  50] loss=1.1666  val_pehe=3.1194  val_qini=0.5965  test_pehe=3.1320  test_qini=0.5985
+[ep  60] loss=0.7908  val_pehe=3.1782  val_qini=0.6076  test_pehe=3.2265  test_qini=0.5961
+[ep  70] loss=0.6828  val_pehe=3.4313  val_qini=0.6070  test_pehe=3.5272  test_qini=0.5766
+[ep  80] loss=0.4315  val_pehe=3.7904  val_qini=0.5905  test_pehe=3.9518  test_qini=0.5698
+[ep  90] loss=0.1953  val_pehe=3.7843  val_qini=0.5896  test_pehe=3.9600  test_qini=0.5730
+[ep 100] loss=0.0862  val_pehe=3.9973  val_qini=0.5815  test_pehe=4.1814  test_qini=0.5637
+[ep 110] loss=0.0505  val_pehe=3.7871  val_qini=0.5806  test_pehe=3.9698  test_qini=0.5629
+[ep 120] loss=0.0399  val_pehe=3.8820  val_qini=0.5854  test_pehe=4.0630  test_qini=0.5676
+[ep 130] loss=0.0398  val_pehe=3.8189  val_qini=0.5864  test_pehe=3.9897  test_qini=0.5698
+[ep 140] loss=0.0292  val_pehe=3.7949  val_qini=0.5885  test_pehe=3.9584  test_qini=0.5707
+[ep 150] loss=0.0291  val_pehe=3.8397  val_qini=0.5891  test_pehe=4.0057  test_qini=0.5726
+[ep 160] loss=0.0196  val_pehe=3.7812  val_qini=0.5898  test_pehe=3.9473  test_qini=0.5725
+[ep 170] loss=0.0135  val_pehe=3.7985  val_qini=0.5912  test_pehe=3.9654  test_qini=0.5731
+[ep 180] loss=0.0100  val_pehe=3.8353  val_qini=0.5916  test_pehe=4.0027  test_qini=0.5726
+[ep 190] loss=0.0140  val_pehe=3.8227  val_qini=0.5903  test_pehe=3.9921  test_qini=0.5714
+[ep 199] loss=0.0156  val_pehe=3.7861  val_qini=0.5935  test_pehe=3.9550  test_qini=0.5740
+  -> test_pehe=2.9935  test_qini=0.5990  (40s)
+
+
+======================================================================
+  GAT Depth Sensitivity — TARNet+GPE on DBLP (rho=10)
+======================================================================
+ Depth |            Test PEHE |            Test Qini
+----------------------------------------------------------------------
+  L=1   |   2.2495 +/- 0.0508 |   0.6307 +/- 0.0244
+  L=2   |   1.7706 +/- 0.0618 |   0.6498 +/- 0.0237
+  L=3   |   1.7543 +/- 0.0284 |   0.6566 +/- 0.0227
+  L=5   |   2.2265 +/- 0.0934 |   0.6368 +/- 0.0218
+  L=7   |   2.9781 +/- 0.0696 |   0.5858 +/- 0.0218
+======================================================================
