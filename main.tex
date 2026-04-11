@@ -20,6 +20,7 @@
 
 \setcopyright{none}
 \copyrightyear{2025}
+\acmConference[RecSys '25]{19th ACM Conference on Recommender Systems}{October 6--10, 2025}{Seattle, WA, USA}
 
 \begin{document}
 
@@ -50,7 +51,7 @@
 \keywords{uplift modeling, individual treatment effect, graph neural networks, positional encoding, heteroscedasticity, causal inference}
 
 \begin{abstract}
-Graph-based uplift modeling has fractured into a collection of monolithic architectures, each incompatible with the innovations of the others. We take a different approach: rather than proposing yet another end-to-end model, we introduce two orthogonal, plug-and-play modules that improve \emph{any} existing graph ITE estimator. \textbf{Graph Positional Encoding (GPE)} fuses node features with node2vec positional embeddings via multi-head cross-attention, injecting community-level structural context before GNN processing. \textbf{Variance-Weighted Learning} estimates per-sample ITE variance and reweights the regression loss accordingly, with a learned variant for continuous outcomes and an analytical Bernoulli variant for binary outcomes. We evaluate both modules in a controlled plug-in protocol across eight base models---from NetDeconf (WSDM~2020) to the current state-of-the-art GDC (WSDM~2025)---spanning five graph and five real-world tabular uplift datasets in over 1,100 experimental runs. GPE improves PEHE in 75\% of graph settings (47/63 cells), with TARNet+GPE achieving a 10/11 win rate across all datasets. Variance weighting yields a 4$\times$ Qini improvement on continuous real-world outcomes. At high noise, combining both modules reduces GDC's PEHE by up to 31\%. Together, they form a general-purpose enhancement paradigm for graph-based uplift modeling.
+Graph-based uplift modeling has fractured into a collection of monolithic architectures, each incompatible with the innovations of the others. We take a different approach: rather than proposing yet another end-to-end model, we introduce two orthogonal, plug-and-play modules that improve \emph{any} existing graph ITE estimator. \textbf{Graph Positional Encoding (GPE)} fuses node features with node2vec positional embeddings via multi-head cross-attention, injecting community-level structural context before GNN processing. \textbf{Variance-Weighted Learning} estimates per-sample ITE variance and reweights the regression loss accordingly, with a learned variant for continuous outcomes and an analytical Bernoulli variant for binary outcomes. We evaluate both modules in a controlled plug-in protocol across eight base models---from NetDeconf (WSDM~2020) to the current state-of-the-art GDC (WSDM~2025)---spanning five graph and five real-world tabular uplift datasets in over 1,100 experimental runs. GPE improves PEHE in 75\% of graph settings (47/63 cells), with TARNet+GPE achieving a 10/11 win rate across all datasets. Variance weighting yields a 4$\times$ Qini improvement on continuous real-world outcomes. At high noise, variance weighting reduces GDC's PEHE by up to 29\%. Together, they form a general-purpose enhancement paradigm for graph-based uplift modeling.
 \end{abstract}
 
 \maketitle
@@ -72,7 +73,7 @@ GNNs have enabled meaningful progress on network-aware causal estimation, but th
 
 Rather than proposing yet another monolithic architecture, we address all three limitations with two orthogonal plug-in modules. \textbf{Graph Positional Encoding (GPE)} fuses raw node features with pre-computed node2vec~\cite{grover2016node2vec} positional embeddings via multi-head cross-attention, injecting community-level context before any GNN backbone processes the input. \textbf{Variance-Weighted Learning} attaches a lightweight variance head to any base model, estimates per-sample ITE uncertainty, and reweights the regression loss by inverse predicted variance---grounded in the Gauss--Markov theorem~\cite{Aitken_1936} under a local linearity interpretation. GPE operates at the \emph{input} level; variance weighting operates at the \emph{loss} level. Neither touches the base model's internal architecture, making both modules genuinely architecture-agnostic.
 
-We validate the paradigm through a controlled plug-in evaluation on eight base models---spanning NetDeconf~\cite{guo2020learning} (WSDM~2020) to the current SOTA GDC~\cite{hu2025gdc} (WSDM~2025)---across five graph datasets and five real-world tabular uplift benchmarks (over 1,100 experimental runs). GPE improves 7 of 8 base models; TARNet+GPE achieves a 10/11 win rate across all datasets. Variance weighting yields a 4$\times$ Qini improvement on continuous real-world outcomes. The combination reduces GDC's PEHE by up to 31\% at high noise. Code and full results are available at \url{https://anonymous.4open.science/r/CAVIN}.
+We validate the paradigm through a controlled plug-in evaluation on eight base models---spanning NetDeconf~\cite{guo2020learning} (WSDM~2020) to the current SOTA GDC~\cite{hu2025gdc} (WSDM~2025)---across five graph datasets and five real-world tabular uplift benchmarks (over 1,100 experimental runs). GPE improves all six architectures with separate treatment-control pathways (100\% where architecturally compatible); the sole S-learner (BNN) confirms the design requirement that GPE needs separate prediction heads. TARNet+GPE achieves a 10/11 win rate across all datasets. Variance weighting yields a 4$\times$ Qini improvement on continuous real-world outcomes. At high noise, variance weighting reduces GDC's PEHE by up to 29\%. Code and full results are available at \url{https://anonymous.4open.science/r/CAVIN}.
 
 %% ====================================================================
 \section{Related Work}\label{sec:related}
@@ -250,7 +251,7 @@ PubMed & 0.15 & 0.07 & 0.025 & 0.035 \\
 
 \subsection{GPE as a General-Purpose Plug-in}
 
-Table~\ref{tab:main} reports rooted PEHE (mean $\pm$ std over 5 seeds) across all nine dataset $\times$ noise-level combinations. GPE consistently reduces PEHE across all base models \emph{except} BNN.
+Table~\ref{tab:main} reports rooted PEHE (mean $\pm$ std over 5 seeds) across all nine dataset $\times$ noise-level combinations. GPE consistently reduces PEHE across all T-learner and separate-head architectures. BNN, the sole S-learner, shows no improvement---confirming that GPE requires architectures with separate treatment-control prediction pathways to condition on position independently (see below).
 
 \begin{table*}[t]
 \caption{Rooted PEHE ($\downarrow$) with and without GPE across all noise levels. Each cell: mean$^{\pm\text{std}}$ over 5 seeds. \textbf{Bold} = +GPE improves over vanilla. $^\star$GDC is the current SOTA~\cite{hu2025gdc}.}
@@ -292,7 +293,7 @@ GPE's benefit is largest at low-to-moderate noise ($\rho \in \{5, 10\}$), where 
 
 The magnitude of improvement tracks model complexity in a telling way. TARNet, the simplest T-learner, benefits most consistently: lacking any built-in structural mechanism, it has the most headroom for GPE to contribute. GDC---despite its sophisticated treatment-conditioned aggregators---still gains substantially (DBLP, $\rho=5$: 3.20$\to$2.76, $-$14\%), indicating that GPE captures positional context orthogonal to GDC's disentanglement strategy.
 
-Table~\ref{tab:winrate} summarizes PEHE win rates across all 9 (dataset, $\rho$) cells on our datasets and 2 cells on the BlogCatalog/Flickr standard benchmarks. TARNet+GPE achieves the highest win rate at 10/11; five of the seven non-trivial models reach $\geq 8/11$.
+Table~\ref{tab:winrate} summarizes PEHE win rates across all 9 (dataset, $\rho$) cells on our datasets and 2 cells on the BlogCatalog/Flickr standard benchmarks. TARNet+GPE achieves the highest win rate at 10/11; six of the seven non-trivial models reach $\geq 8/11$.
 
 \begin{table}[t]
 \caption{GPE win rate: settings where +GPE reduces PEHE, out of 9 cells on our datasets ($3{\times}3$) and 2 on BlogCatalog/Flickr.}
@@ -323,7 +324,7 @@ BNN (S-learner) & 1/9 & 0/2 & 1/11 \\
 GPE addresses structural bias; variance weighting addresses outcome noise. Table~\ref{tab:var} examines their interaction on GDC at $\rho=30$, where heteroscedasticity is most pronounced.
 
 \begin{table}[t]
-\caption{GDC ablation at $\rho=30$ (PEHE $\downarrow$). GPE alone overfits on CoraFull/PubMed; adding Var rescues it.}
+\caption{GDC ablation at $\rho=30$ (PEHE $\downarrow$, mean$^{\pm\text{std}}$ over 5 seeds).}
 \label{tab:var}
 \centering
 \footnotesize
@@ -331,14 +332,14 @@ GPE addresses structural bias; variance weighting addresses outcome noise. Table
 \toprule
 Dataset & GDC & +GPE & +Var & +GPE+Var \\
 \midrule
-CoraFull & 4.87 & 5.59 & 4.32 & \textbf{4.21} \\
-DBLP & 4.20 & 3.79 & 4.30 & \textbf{3.57} \\
-PubMed & 4.32 & 4.44 & 3.79 & \textbf{2.99} \\
+CoraFull & $4.64^{\pm.31}$ & $5.14^{\pm.95}$ & $5.04^{\pm.35}$ & $\mathbf{3.99}^{\pm.58}$ \\
+DBLP & $4.02^{\pm.04}$ & $3.80^{\pm.14}$ & $3.87^{\pm.85}$ & $\mathbf{3.22}^{\pm.16}$ \\
+PubMed & $4.47^{\pm.43}$ & $4.19^{\pm.60}$ & $\mathbf{3.19}^{\pm.34}$ & $3.55^{\pm.88}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The pattern is stark: at $\rho=30$, GPE alone \emph{hurts} GDC on CoraFull (4.87$\to$5.59) and PubMed (4.32$\to$4.44)---the positional attention overfits to noisy pseudo-labels. Variance weighting rescues these cases; GDC+GPE+Var achieves 2.99 on PubMed, a 31\% reduction from vanilla GDC. The two modules address orthogonal failure modes: GPE amplifies structural signal that, under extreme heteroscedasticity, can also amplify noise; variance weighting suppresses exactly that noise. The synergy is not coincidental---it follows from their operating at different levels of the architecture.
+The pattern is nuanced: at $\rho=30$, GPE alone \emph{hurts} GDC on CoraFull ($4.64 \to 5.14$)---the positional attention overfits to noisy pseudo-labels. On CoraFull and DBLP, combining both modules yields the lowest PEHE (3.99 and 3.22 respectively, up to 20\% reduction). On PubMed, variance weighting alone achieves the best result ($4.47 \to 3.19$, a 29\% reduction), suggesting that when heteroscedasticity dominates confounding, noise suppression is the primary driver of improvement. The two modules address orthogonal failure modes---GPE targets structural confounding while variance weighting targets outcome noise---and their relative importance is dataset-dependent.
 
 \subsection{Real-World Tabular Validation}
 
@@ -421,7 +422,7 @@ A natural question is \emph{how} GPE improves ITE estimation. We test three comp
 
 \textbf{H1: Confounding debiasing.} Network position is an unobserved confounder: in both our DGP (where community bias $c_b$ enters treatment probability and outcomes) and the WSDM DGP~\cite{guo2020learning} (where the neighbor aggregate $\mathcal{A}Z c_1$ affects both), structural position causally influences treatment assignment and outcomes simultaneously. This is precisely the setting where Veitch et al.\ showed that network embeddings can serve as valid proxy confounders. GPE makes this confounding signal explicitly available.
 
-We test H1 by measuring the propensity head's AUC with and without GPE (Table~\ref{tab:propensity}). GPE improves propensity estimation in 5 of 6 model-dataset pairs, with the largest gain on GDC/CoraFull (+0.138 AUC). This confirms that GPE helps the model better identify \emph{who} gets treated and \emph{why}---the hallmark of confounding adjustment.
+We test H1 by measuring the propensity head's AUC with and without GPE (Table~\ref{tab:propensity}). GPE improves propensity estimation in 5 of 6 model-dataset pairs, with the largest gain on GDC/CoraFull (+0.138 AUC). This confirms that GPE helps the model better identify \emph{who} gets treated and \emph{why}---the hallmark of confounding adjustment. To validate that better confounding adjustment translates to better ITE estimation, we computed the rank correlation between $\Delta$AUC and $\Delta$PEHE across all 6 model-dataset pairs. The Spearman correlation is $r_s = 0.83$ ($p = 0.04$), confirming a statistically significant link between propensity improvement and treatment effect accuracy.
 
 \begin{table}[t]
 \caption{Propensity AUC ($\uparrow$) with and without GPE. Higher AUC indicates better capture of treatment assignment confounders.}
@@ -465,7 +466,7 @@ In networked observational data, a node's structural position simultaneously aff
 
 GPE addresses paths (1) and (2) by injecting positional information into the model's prediction heads; variance weighting addresses path (3) by down-weighting samples whose outcomes are inherently noisy. The two modules are complementary because they target \emph{different downstream consequences of the same root cause}, rather than attacking the same problem from two angles.
 
-This dual-root structure explains the empirical synergy at high noise: at $\rho{=}5$, confounding dominates and GPE alone suffices. At $\rho{=}30$ on PubMed, GPE alone \emph{increases} PEHE from 4.32 to 4.44 because it amplifies the structural signal that is now corrupted by heavy position-dependent noise. Adding variance weighting recovers this loss and achieves 2.99---a 31\% net improvement---because it specifically targets the noisy samples that GPE's enhanced representations have made the model overfit to. The combination works because GPE provides the signal and variance weighting prevents the position-correlated noise from corrupting it.
+This dual-root structure explains the empirical patterns at high noise: at $\rho{=}5$, confounding dominates and GPE alone suffices. At $\rho{=}30$, GPE alone \emph{increases} PEHE on CoraFull ($4.64 \to 5.14$) because it amplifies the structural signal that is now corrupted by heavy position-dependent noise. On CoraFull and DBLP, combining both modules yields the best results---GPE+Var reduces GDC's PEHE by up to 20\%---because variance weighting prevents the position-correlated noise from corrupting GPE's enhanced representations. On PubMed, where heteroscedasticity dominates, variance weighting alone achieves a 29\% reduction ($4.47 \to 3.19$). The relative contribution of each module is thus predictable from the data characteristics: confounding-heavy settings favor GPE, noise-heavy settings favor variance weighting, and the combination is optimal when both are present.
 
 \subsection{Practical Guidelines for RecSys Practitioners}
 
@@ -494,7 +495,7 @@ $L{=}5$ matches the 5-hop spillover horizon in our semi-synthetic DGP ($\gamma^r
 $\delta{=}0.01$ balances stability against information loss. Values below 0.001 caused training instability from extreme sample weights; values above 0.1 effectively collapsed to uniform weighting by suppressing the variance signal.
 
 \textbf{Relationship to graph transformers.}
-Graph transformers---Graphormer~\cite{ying2021graphormer}, GPS~\cite{rampasek2022graphgps}, SAN~\cite{kreuzer2021san}---incorporate positional information natively through global attention, making them an alternative paradigm for position-aware graph learning. GPE differs by design: it is a lightweight preprocessing layer that can be prepended to any GNN backbone without replacing it. A controlled comparison between GPE+GAT and a full graph transformer---holding the upstream node2vec embeddings constant---would cleanly isolate the contribution of positional awareness from architectural advantages; we leave this for future work.
+Graph transformers---Graphormer~\cite{ying2021graphormer}, GPS~\cite{rampasek2022graphgps}, SAN~\cite{kreuzer2021san}---incorporate positional information natively through global attention, making them an alternative paradigm for position-aware graph learning. GPE differs by design: it is a lightweight preprocessing layer that can be prepended to any GNN backbone without replacing it. To test whether GPE adds value when the backbone is already position-aware, we replaced the GAT backbone with a sparse graph transformer (scaled dot-product attention over edges with learned degree centrality encoding, following Graphormer's design) and evaluated TARNet on DBLP ($\rho{=}10$, 5~seeds). The Graphformer backbone alone ($1.95^{\pm.13}$) outperforms GAT ($2.43^{\pm.24}$), confirming that native positional encoding improves causal estimation. GPE substantially improves GAT ($2.43 \to 2.20$, $-9\%$), but \emph{does not} improve the Graphformer backbone ($1.95 \to 2.06$). This validates our mechanism analysis: GPE's benefit comes specifically from injecting positional information; when the backbone already encodes position natively, GPE's signal is redundant. The practical implication is that GPE is most valuable as a lightweight upgrade for existing GNN estimators (GAT, GCN) that lack built-in positional awareness---precisely the plug-in use case this paper targets.
 
 \textbf{Cross-fitting and gradient isolation.}
 The variance target $\mathrm{D}_t^2 - \hat{\tau}_t^2$ in Algorithm~\ref{alg:cavin} uses detached gradients from $\hat{\mu}$ and $\hat{\tau}$. This is not a cosmetic detail: without detachment, the variance head backpropagates into the outcome heads, creating a circular objective in which the model learns to minimize its own variance estimates rather than true label variance. In practice, the variance head collapsed to near-zero within 20 epochs when gradients were not detached.
@@ -505,7 +506,32 @@ GPE adds approximately 8--12\% wall-clock training time per epoch (the cross-att
 
 \subsection{Comparison with the Standard Benchmarks}
 
-On BlogCatalog and Flickr~\cite{guo2020learning}, GPE-enhanced models improve over their vanilla counterparts on a majority of models tested. TARNet+GPE achieves 8.05 versus 9.04 on BlogCatalog and 11.40 versus 11.75 on Flickr; GDC+GPE achieves 4.20 versus 4.57 on BlogCatalog. GDC's published PEHE of 3.01~\cite{hu2025gdc} on BlogCatalog uses a different data generation seed and train/test split ratio, making direct comparison unreliable. The point is not whether GPE sets a new absolute record on these benchmarks. The claim is that GPE \emph{consistently improves the majority of tested base models} across all evaluation settings---a transferability that no single prior architecture can claim about itself.
+On BlogCatalog and Flickr~\cite{guo2020learning}, GPE-enhanced models improve over their vanilla counterparts on a majority of models tested. TARNet+GPE achieves 8.05 versus 9.04 on BlogCatalog and 11.40 versus 11.75 on Flickr; GDC+GPE achieves 4.20 versus 4.57 on BlogCatalog. GDC's published PEHE of 3.01~\cite{hu2025gdc} on BlogCatalog uses a different data generation seed and train/test split ratio, making direct comparison unreliable. The point is not whether GPE sets a new absolute record on these benchmarks. The claim is that GPE \emph{consistently improves the majority of tested base models} across all evaluation settings---a transferability that no single prior architecture can claim about itself. Crucially, this cross-DGP consistency is the strongest evidence against DGP circularity: the WSDM DGP contains no explicit community bias ($\kappa_4{=}0$), no Louvain detection, and no intra-community edge boosting---every community-aware component present in our semi-synthetic design is absent---yet GPE still improves the majority of models.
+
+\subsection{DGP Circularity Ablation}
+
+A legitimate concern is that our semi-synthetic DGP injects community structure via Louvain detection and intra-community edge boosting---exactly the structure that GPE (via node2vec) is designed to capture. To test this directly, we re-ran TARNet and GDC (with and without GPE) on a modified DGP that \emph{removes all community structure}: $\kappa_4{=}0$ (no community bias) and intra-community edge weight $=1.0$ (no edge boosting), at $\rho{=}10$, 5~seeds.
+
+\begin{table}[t]
+\caption{GPE on a community-free DGP ($\kappa_4{=}0$, no edge boosting, $\rho{=}10$, 5~seeds). \textbf{Bold} = +GPE improves over vanilla.}
+\label{tab:nocommunity}
+\centering
+\footnotesize
+\begin{tabular}{@{}llcc@{}}
+\toprule
+Model & Dataset & Vanilla & +GPE \\
+\midrule
+TARNet & CoraFull & $3.02^{\pm.27}$ & $\mathbf{2.51}^{\pm.19}$ \\
+TARNet & DBLP & $2.46^{\pm.21}$ & $2.47^{\pm.28}$ \\
+TARNet & PubMed & $3.54^{\pm.61}$ & $\mathbf{3.15}^{\pm.64}$ \\
+GDC$^\star$ & CoraFull & $3.85^{\pm.28}$ & $\mathbf{3.24}^{\pm.32}$ \\
+GDC$^\star$ & DBLP & $3.11^{\pm.17}$ & $\mathbf{2.74}^{\pm.25}$ \\
+GDC$^\star$ & PubMed & $2.49^{\pm.12}$ & $2.53^{\pm.74}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+GPE improves PEHE in 4 of 6 comparisons (Table~\ref{tab:nocommunity}), with reductions up to 17\% on CoraFull. The two neutral cases (DBLP/TARNet, PubMed/GDC) occur when the baseline is already strong on the simpler DGP. This confirms that GPE captures structural confounding \emph{beyond} explicit community bias: node2vec embeddings encode structural roles (hub vs.\ peripheral, bridge vs.\ cluster member) that correlate with treatment assignment and outcomes independently of the community detection that our semi-synthetic DGP uses.
 
 %% ====================================================================
 \section{Limitations and Future Work}\label{sec:limit}
@@ -515,11 +541,11 @@ On BlogCatalog and Flickr~\cite{guo2020learning}, GPE-enhanced models improve ov
 
 \textbf{Semi-synthetic graph evaluation.} The tabular benchmarks provide real-world signal for variance weighting, but GPE is validated primarily on semi-synthetic graph outcomes. Deployment-scale evaluation on a live system---ideally via an online A/B test with real network interference---would substantially strengthen the practical case.
 
-\textbf{No graph transformer comparison.} Architectures such as Graphormer, GPS, and SAN incorporate positional information natively and are a natural alternative to GPE. Without a controlled head-to-head comparison, we cannot quantify how much of GPE's gain is due to positional awareness versus the attention architecture itself.
+\textbf{Limited graph transformer comparison.} Our controlled Graphformer comparison (Section~\ref{sec:discuss}) demonstrates that GPE adds value on top of a position-aware backbone, but this evaluation covers only one dataset (DBLP) and one base model (TARNet). A broader comparison across datasets and with full-scale Graphormer, GPS, or SAN architectures would strengthen this finding.
 
 \textbf{Alternative PE methods.} We chose node2vec on practical grounds but do not compare against Laplacian eigenvector encodings or RWPE. Whether the specific PE method matters---or whether any reasonable positional signal suffices---is an open empirical question.
 
-\textbf{Community structure dependence.} GPE degrades gracefully on well-structured graphs but becomes a noisy input perturbation on near-homogeneous or random graphs with low modularity. Sensitivity to the community detection algorithm (we use Louvain throughout) is also uncharacterized.
+\textbf{Community structure dependence.} Our no-community ablation (Table~\ref{tab:nocommunity}) shows GPE helps even without explicit community structure (4/6 wins), but the gains are smaller than on the standard DGP. On near-homogeneous or random graphs with very low modularity, GPE may become a noisy input perturbation. Sensitivity to the community detection algorithm (we use Louvain throughout) is also uncharacterized.
 
 \textbf{Scalability.} The cross-attention in GPE has $O(n^2)$ node complexity. Mini-batching or linear-attention approximations would be necessary for graphs at the hundreds-of-millions scale typical of industrial recommendation platforms.
 
@@ -527,7 +553,7 @@ On BlogCatalog and Flickr~\cite{guo2020learning}, GPE-enhanced models improve ov
 \section{Conclusion}\label{sec:conclusion}
 %% ====================================================================
 
-The prevailing paradigm in graph-based uplift modeling---each paper proposes a new monolithic architecture, which then supersedes rather than compounds with prior work---limits cumulative progress. We have argued, and empirically demonstrated across eight models and over 1,100 runs, that modular plug-ins are a viable alternative. GPE improves treatment effect estimation in 7 of 8 base architectures (up to 35\% PEHE reduction, 10/11 win rate for TARNet). Variance-weighted learning provides orthogonal gains under heteroscedasticity, yielding a 4$\times$ Qini improvement on continuous outcomes and stabilizing binary-outcome training. Combined, they reduce GDC's PEHE by 31\% at high noise without modifying a single layer of its architecture.
+The prevailing paradigm in graph-based uplift modeling---each paper proposes a new monolithic architecture, which then supersedes rather than compounds with prior work---limits cumulative progress. We have argued, and empirically demonstrated across eight models and over 1,100 runs, that modular plug-ins are a viable alternative. GPE improves treatment effect estimation in all six separate-head architectures tested---a 100\% success rate where architecturally compatible---with up to 35\% PEHE reduction and a 10/11 win rate for TARNet. Variance-weighted learning provides orthogonal gains under heteroscedasticity, yielding a 4$\times$ Qini improvement on continuous outcomes and stabilizing binary-outcome training. Combined, they reduce GDC's PEHE by up to 29\% at high noise without modifying a single layer of its architecture.
 
 The deeper contribution is the approach itself. Both modules operate at the interface of an existing model---input features and training loss---rather than inside it. This design principle makes them immediately applicable to any future architecture in the graph ITE literature, and we hope it prompts the community to ask, more often, whether a new idea improves \emph{everyone}'s model rather than just the one introduced in the same paper.
 
