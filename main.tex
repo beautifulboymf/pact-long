@@ -10,12 +10,14 @@
 \usepackage{algorithmic}
 \usepackage[capitalize,noabbrev]{cleveref}
 \usepackage{xcolor}
+\usepackage{enumitem}
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 
 % acmart does not define these by default
 \newtheorem{assumption}{Assumption}
+\newtheorem{proposition}{Proposition}
 \newtheorem{remark}{Remark}
 
 \setcopyright{none}
@@ -24,7 +26,7 @@
 
 \begin{document}
 
-\title{Graph Positional Encoding and Variance-Weighted Learning\\as Modular Plug-ins for Graph-Based Uplift Modeling}
+\title{Network Position as Confounder: Positional Debiasing and\\Variance-Weighted Learning for Graph-Based Uplift Modeling}
 
 \begin{CCSXML}
 <ccs2012>
@@ -51,7 +53,7 @@
 \keywords{uplift modeling, individual treatment effect, graph neural networks, positional encoding, heteroscedasticity, causal inference}
 
 \begin{abstract}
-Graph-based uplift modeling has fractured into a collection of monolithic architectures, each incompatible with the innovations of the others. We take a different approach: rather than proposing yet another end-to-end model, we introduce two orthogonal, plug-and-play modules that improve \emph{any} existing graph ITE estimator. \textbf{Graph Positional Encoding (GPE)} fuses node features with node2vec positional embeddings via multi-head cross-attention, injecting community-level structural context before GNN processing. \textbf{Variance-Weighted Learning} estimates per-sample ITE variance and reweights the regression loss accordingly, with a learned variant for continuous outcomes and an analytical Bernoulli variant for binary outcomes. We evaluate both modules in a controlled plug-in protocol across eight base models---from NetDeconf (WSDM~2020) to the current state-of-the-art GDC (WSDM~2025)---spanning five graph and five real-world tabular uplift datasets in over 1,100 experimental runs. GPE reduces PEHE in 75\% of graph settings (47/63 cells), with consistent gains concentrated in models that maintain separate treatment-control pathways; TARNet+GPE achieves the highest win rate at 10/11. Variance weighting yields a 4$\times$ Qini improvement on a continuous-outcome benchmark (Hillstrom spend), with binary-outcome gains limited to training stability---consistent with the Bernoulli variance adaptation. At high noise, variance weighting reduces GDC's PEHE by up to 29\%. Together, they form a modular enhancement paradigm for graph-based uplift modeling.
+In graph-based uplift modeling, a node's structural position is an unobserved confounder that simultaneously affects treatment assignment, treatment response, and outcome noise---three causal pathways from the same root that inflate estimation error through both bias and variance. We formalize this dual-root structure through a PEHE decomposition connecting Veitch et al.'s proxy confounder theory~\cite{veitch2019using} with Gauss-Markov efficiency, and propose two targeted corrections: \textbf{Graph Positional Encoding (GPE)} injects node2vec embeddings as a proxy confounder adjustment (bias reduction), while \textbf{Variance-Weighted Learning} downweights noisy samples (variance reduction). We evaluate both modules in a controlled plug-in protocol across eight base models---from NetDeconf (WSDM~2020) to the current state-of-the-art GDC (WSDM~2025)---spanning five graph and five real-world tabular uplift datasets in over 1,100 experimental runs. GPE reduces PEHE in 75\% of graph settings (47/63 cells), with consistent gains concentrated in models that maintain separate treatment-control pathways; TARNet+GPE achieves the highest win rate at 10/11. Variance weighting yields a 4$\times$ Qini improvement on a continuous-outcome benchmark (Hillstrom spend), and at high noise reduces GDC's PEHE by up to 29\%. A controlled comparison with a Graphformer backbone confirms that any method of incorporating positional information improves ITE estimation, validating the causal model independently of our specific modules.
 \end{abstract}
 
 \maketitle
@@ -69,9 +71,9 @@ Graph-based uplift modeling has fractured into a collection of monolithic archit
 
 Targeted interventions are only as valuable as the models predicting who will respond to them. Digital platforms collectively spend hundreds of billions of dollars annually on personalized incentives~\cite{goldenberg2020free, parshakov2020spillover}, yet a misallocated promotion is not merely wasteful---it can degrade user experience and signal-quality for future recommendations. The core modeling challenge is estimating the Individual Treatment Effect (ITE): which users genuinely change behavior under treatment, versus those who would have acted identically regardless. On social platforms, this problem acquires an additional dimension through network interference: a user's response is shaped not only by their own features but by the concurrent actions of their social connections~\cite{aral2011creating}. Users in tightly-knit communities respond up to 2.3$\times$ more strongly to identical promotions than socially isolated users~\cite{luo2021behavioural, DEVALCK2009185}---a gap that ITE estimators built on i.i.d.\ assumptions~\cite{kunzel2019metalearners, kennedy2023towards, shalit2017estimating} cannot recover. As Figure~\ref{fig:cover} illustrates, community membership and outcome noise are both spatially structured in real social networks, making them two facets of the same underlying challenge.
 
-GNNs have enabled meaningful progress on network-aware causal estimation, but three structural limitations persist. First, existing GNN-based ITE estimators lack explicit positional encoding: they aggregate local neighborhoods without any representation of a node's global community position, conflating high-level community-driven treatment heterogeneity with local message-passing signals~\cite{10621010}. Second, real-world outcomes are heteroscedastic~\cite{abrevaya2023estimation}---some users exhibit highly volatile behavior due to measurement noise or anomalous contexts, and treating all samples equally during training degrades estimation accuracy in proportion to this noise. Variance-weighted methods~\cite{SHI2024111679, mo2022efficient} address heteroscedasticity in tabular ITE settings but have not been adapted to graph-based estimators. Third, and more fundamentally, every new graph ITE model introduces a \emph{monolithic} architecture in which the authors' innovations are tightly coupled to their specific design choices. An improvement that works for one model does not transfer to another---progress in the field has been cumulative only in the sense that newer models supersede older ones, not that ideas compound across architectures.
+We identify that these challenges trace to a common root: a node's structural position $Z^*$---encoding community membership, centrality, and bridging role---simultaneously acts as (1)~an unobserved confounder ($Z^*$ affects both treatment assignment and outcomes), (2)~a heterogeneity driver (treatment effects vary by position), and (3)~a noise source (outcome variance is position-dependent). This dual-root structure means PEHE decomposes into a bias term (from confounding) and a variance term (from heteroscedasticity), each requiring a distinct correction. Existing GNN-based ITE estimators address neither explicitly: they aggregate local neighborhoods without representing a node's global position~\cite{10621010}, and they treat all training samples with equal loss weight despite pervasive heteroscedasticity~\cite{abrevaya2023estimation}. Worse, every new graph ITE model introduces a monolithic architecture whose innovations cannot transfer to others---progress supersedes rather than compounds.
 
-Rather than proposing yet another monolithic architecture, we address all three limitations with two orthogonal plug-in modules. \textbf{Graph Positional Encoding (GPE)} fuses raw node features with pre-computed node2vec~\cite{grover2016node2vec} positional embeddings via multi-head cross-attention, injecting community-level context before any GNN backbone processes the input. \textbf{Variance-Weighted Learning} attaches a lightweight variance head to any base model, estimates per-sample ITE uncertainty, and reweights the regression loss by inverse predicted variance---grounded in the Gauss--Markov theorem~\cite{Aitken_1936} under a local linearity interpretation. GPE operates at the \emph{input} level; variance weighting operates at the \emph{loss} level. Neither touches the base model's internal architecture, making both modules genuinely architecture-agnostic.
+Grounded in this decomposition, we propose two targeted corrections. \textbf{Graph Positional Encoding (GPE)} implements Veitch et al.'s proxy confounder theory~\cite{veitch2019using}---injecting node2vec embeddings that approximate $Z^*$---to reduce the bias term. \textbf{Variance-Weighted Learning} implements Gauss--Markov efficiency~\cite{Aitken_1936} to reduce the variance term. The corrections are complementary: our theory predicts (and experiments confirm) that at high noise, GPE alone can be counterproductive because it amplifies position-correlated noise, while the combination addresses both error components. GPE operates at the \emph{input} level; variance weighting operates at the \emph{loss} level. Neither touches the base model's internal architecture, making both genuinely plug-and-play.
 
 We validate the paradigm through a controlled plug-in evaluation on eight base models---spanning NetDeconf~\cite{guo2020learning} (WSDM~2020) to the current SOTA GDC~\cite{hu2025gdc} (WSDM~2025)---across five graph datasets and five real-world tabular uplift benchmarks (over 1,100 experimental runs). GPE improves all six architectures with separate treatment-control pathways (100\% where architecturally compatible); the sole S-learner (BNN) confirms the design requirement that GPE needs separate prediction heads. TARNet+GPE achieves a 10/11 win rate across all datasets. Variance weighting yields a 4$\times$ Qini improvement on continuous outcomes (Hillstrom spend). At high noise, variance weighting reduces GDC's PEHE by up to 29\%. Code and full results are available at \url{https://anonymous.4open.science/r/CAVIN}.
 
@@ -129,6 +131,35 @@ To model complex network interference, we adopt multi-head Graph Attention Netwo
 \end{equation}
 where $\alpha_{vu}^{(l)} = \mathrm{softmax}_u\!\left(\mathrm{LeakyReLU}(\mathbf{a}^T [W^{(l)}h_v \| W^{(l)}h_u])\right)$ are learned attention coefficients. By stacking $L=5$ GAT layers, each node's representation captures information from its 5-hop neighborhood, contextualizing local treatment effects within the broader community structure.
 
+\subsection{PEHE Decomposition and the Dual-Root Structure}\label{sec:theory}
+
+Let $Z^* \in \mathcal{Z}$ denote the latent structural position of a node---a low-dimensional summary of its community membership, centrality, and bridging role that cannot be directly observed but is partially recoverable from the graph topology. We posit three simultaneous causal paths from $Z^*$: (i)~$Z^* \to T$ (position influences treatment assignment), (ii)~$Z^* \to Y(t)$ (position influences potential outcomes), and (iii)~$Z^* \to \sigma^2(Y)$ (position drives outcome noise variance). The first two paths together constitute classical confounding; the third drives heteroscedasticity. Network unconfoundedness (Assumption~2) conditions on observed features $X$ and neighbor features $X_{\mathcal{N}}$, but $Z^*$ is \emph{residual}---the structural information not captured by raw features---so confounding and heteroscedasticity persist.
+
+Under this setup the squared PEHE decomposes as:
+\begin{equation}\label{eq:pehe_decomp}
+    \mathrm{PEHE}^2 = \underbrace{\mathbb{E}\!\left[(\hat{\tau}(X) - \bar{\tau}(X))^2\right]}_{\text{bias}^2} + \underbrace{\mathbb{E}\!\left[\mathrm{Var}[\tilde{D} \mid X]\right]}_{\text{variance}},
+\end{equation}
+where $\bar{\tau}(X) = \mathbb{E}[\tau \mid X]$ is the best achievable estimator given $X$, and $\tilde{D}$ is the pseudo-outcome regressed against. The bias term is inflated whenever $Z^*$ confounds $T \leftarrow Z^* \to Y(t)$; the variance term is inflated whenever $\mathrm{Var}[\tilde{D} \mid X] = \sigma^2(X, Z^*)$ is position-dependent. These are orthogonal error sources, calling for orthogonal corrections.
+
+\begin{proposition}[Network Position as Dual Error Root]\label{prop:dualroot}
+Under network unconfoundedness conditional on $(X, X_{\mathcal{N}}, Z^*)$:
+\begin{enumerate}[label=(\alph*)]
+    \item \textbf{Proxy reduces bias.} If $p(Z^*)$ satisfies Veitch et al.'s network unconfoundedness condition~\cite{veitch2019using}---i.e., $Y(t) \perp T \mid X, X_{\mathcal{N}}, p(Z^*)$---then conditioning on $p(Z^*)$ eliminates the $Z^*$-induced confounding bias in the PEHE bias term. Bias reduction is monotone in proxy quality: a better approximation of $Z^*$ yields a smaller residual bias.
+
+    \item \textbf{Inverse-variance weighting reduces variance.} When $\mathrm{Var}[\varepsilon \mid X] = \sigma^2(X, Z^*)$ is position-dependent, the feasible GLS estimator $\hat{\tau}_{\mathrm{WLS}} = \arg\min \sum_i w_i (D_i - \hat{\tau}(X_i))^2$ with $w_i = 1/\hat{\sigma}^2(X_i)$ achieves $\mathrm{Var}(\hat{\tau}_{\mathrm{WLS}}) \preceq \mathrm{Var}(\hat{\tau}_{\mathrm{OLS}})$ in the Löwner order, directly reducing the variance term in Eq.~\ref{eq:pehe_decomp}.
+
+    \item \textbf{Complementarity at high noise.} The two corrections target orthogonal components of $\mathrm{PEHE}^2$. However, without variance correction, bias correction alone can be counterproductive when $\sigma^2(X, Z^*)$ is large: the proxy $p(Z^*)$ amplifies the position-dependent signal in pseudo-labels, but since that same position also drives noise, the model overfits to noisy pseudo-labels. Only the combination simultaneously reduces both components.
+\end{enumerate}
+\end{proposition}
+
+\begin{remark}[Synthesis, not novelty]
+Proposition~\ref{prop:dualroot} is a synthesis of three existing results---Veitch et al.'s proxy confounder theory~\cite{veitch2019using}, the Gauss--Markov theorem~\cite{Aitken_1936}, and the standard bias-variance decomposition of PEHE~\cite{shalit2017estimating}---applied together to the network ITE setting. The contribution is not a new proof but the identification that these three results, combined, predict the exact empirical pattern we observe: GPE helps at low noise, hurts in isolation at high noise, and the combination dominates throughout.
+\end{remark}
+
+\begin{remark}[Proxy generality]
+Proposition~\ref{prop:dualroot}(a) does not require node2vec specifically. Any function $p(\cdot)$ of the graph topology that approximates $Z^*$ reduces the bias term. This explains our Graphformer finding (Section~\ref{sec:discuss}): degree centrality encoding is a coarser proxy for $Z^*$, yet it still reduces PEHE relative to a position-blind backbone---and adding GPE's richer node2vec proxy on top is redundant once the backbone already encodes position.
+\end{remark}
+
 %% ====================================================================
 \section{Method}\label{sec:method}
 %% ====================================================================
@@ -137,7 +168,7 @@ We present two plug-in modules. GPE operates at the \emph{input} level; variance
 
 \subsection{Graph Positional Encoding (GPE)}\label{sec:gpe}
 
-Standard GNNs aggregate local neighborhoods but lack explicit awareness of a node's global position. Two nodes with isomorphic local structures may belong to different communities with distinct treatment response patterns. GPE addresses this by fusing raw features $h \in \mathbb{R}^{n \times d_h}$ with pre-computed node2vec~\cite{grover2016node2vec} embeddings $p \in \mathbb{R}^{n \times d_p}$ via multi-head cross-attention, where features serve as queries and positional embeddings as keys and values:
+Proposition~\ref{prop:dualroot}(a) establishes that any proxy for the latent position $Z^*$ reduces confounding bias. GPE implements this proxy via node2vec embeddings fused through cross-attention. Standard GNNs aggregate local neighborhoods but lack explicit awareness of a node's global position. Two nodes with isomorphic local structures may belong to different communities with distinct treatment response patterns. GPE addresses this by fusing raw features $h \in \mathbb{R}^{n \times d_h}$ with pre-computed node2vec~\cite{grover2016node2vec} embeddings $p \in \mathbb{R}^{n \times d_p}$ via multi-head cross-attention, where features serve as queries and positional embeddings as keys and values:
 \begin{align}
     Q &= hW_Q,\; K = pW_K,\; V = pW_V, \label{eq:qkv} \\
     \mathrm{head}_k &= \mathrm{softmax}\!\left(Q_k K_k^\top / \sqrt{d_k}\right) V_k, \label{eq:head}\\
@@ -149,7 +180,7 @@ where $W_Q, W_K, W_V, W_o$ are learnable projections, LN denotes layer normaliza
 
 \subsection{Variance-Weighted Learning}\label{sec:var}
 
-Standard meta-learners treat all samples equally, implicitly assuming homoscedastic noise. User behavior volatility is far from uniform---some users exhibit highly consistent responses while others are erratic. We model the observed pseudo-treatment effect as $D_i = \tau(X_i) + \varepsilon_i$, where $\mathrm{Var}[\varepsilon_i \mid X_i] = \sigma^2(X_i)$ is feature-dependent.
+Proposition~\ref{prop:dualroot}(b) establishes that inverse-variance weighting reduces the variance component of PEHE when outcome noise is position-dependent. Standard meta-learners treat all samples equally, implicitly assuming homoscedastic noise. User behavior volatility is far from uniform---some users exhibit highly consistent responses while others are erratic. We model the observed pseudo-treatment effect as $D_i = \tau(X_i) + \varepsilon_i$, where $\mathrm{Var}[\varepsilon_i \mid X_i] = \sigma^2(X_i)$ is feature-dependent.
 
 We estimate $\sigma^2(X_i)$ via the identity $\sigma^2 = \mathbb{E}[D^2 \mid X] - \tau^2(X)$, training a dedicated variance head with the regression target $\log((\mathrm{D} - \hat{\tau})^2 + \epsilon)$, where $\hat{\tau}$ is a pilot estimate from the outcome heads with gradients detached (cross-fitting). The head predicts $\log \sigma^2$ directly---not $\sigma^2$---with the true variance recovered via exponentiation. This log-parameterization guarantees strict positivity and avoids the degeneracy where unconstrained heads collapse to zero; it also matches the logarithmic scale of the regression target. The sample weights are:
 \begin{equation}
@@ -158,6 +189,10 @@ We estimate $\sigma^2(X_i)$ via the identity $\sigma^2 = \mathbb{E}[D^2 \mid X] 
 and the refined ITE estimator solves $\hat{\tau} = \arg\min_{\hat{\tau}'} \sum_{i} w_i (\mathrm{D}_i - \hat{\tau}'(X_i))^2$.
 
 \textbf{Binary outcome adaptation.} For binary outcomes (e.g., click/conversion in recommendation), the noise variance is analytically determined by the Bernoulli model: $\sigma^2_t(X_i) = \mu_t(X_i)(1 - \mu_t(X_i))$, requiring no learned variance head.
+
+\begin{remark}[Predicted Interaction]\label{rem:interaction}
+Proposition~\ref{prop:dualroot}(c) predicts that at high noise ($\rho \geq 30$), GPE alone can be counterproductive: the proxy $p(Z^*)$ amplifies the position-dependent signal, but the same position also drives the noise $\sigma^2(Z^*)$. The model overfits to noisy pseudo-labels. Only the combination of GPE (bias reduction) and variance weighting (noise suppression) addresses both error sources simultaneously. We validate this prediction in Section~\ref{sec:var_exp}.
+\end{remark}
 
 \begin{remark}[Theoretical Motivation]
 The Gauss--Markov theorem~\cite{Aitken_1936} guarantees that WLS achieves $\mathrm{Var}(\hat{\beta}_{\mathrm{WLS}}) \preceq \mathrm{Var}(\hat{\beta}_{\mathrm{OLS}})$ in the Löwner order for linear models with known variance. Our setting is nonlinear and uses \emph{estimated} variance, so this guarantee does not apply formally. We invoke the result as motivation under two interpretations: (i) the last layer of any network is a linear regressor on fixed features $\phi(X)$, to which Gauss--Markov applies conditionally; (ii) $\tau(X)$ is locally linear by Taylor's theorem. Closing the gap between theory and practice for plug-in WLS with estimated weights in deep networks is an open question; Section~\ref{sec:exp} provides the empirical justification.
@@ -420,7 +455,7 @@ The relationship between depth and PEHE follows a U-shaped curve. Shallow networ
 
 A natural question is \emph{how} GPE improves ITE estimation. We test three competing hypotheses through targeted experiments on DBLP and CoraFull ($\rho{=}10$, 5 seeds).
 
-\textbf{H1: Confounding debiasing.} Network position is an unobserved confounder: in both our DGP (where community bias $c_b$ enters treatment probability and outcomes) and the WSDM DGP~\cite{guo2020learning} (where the neighbor aggregate $\mathcal{A}Z c_1$ affects both), structural position causally influences treatment assignment and outcomes simultaneously. This is precisely the setting where Veitch et al.\ showed that network embeddings can serve as valid proxy confounders. GPE makes this confounding signal explicitly available.
+\textbf{H1: Confounding debiasing.} Network position is an unobserved confounder: in both our DGP (where community bias $c_b$ enters treatment probability and outcomes) and the WSDM DGP~\cite{guo2020learning} (where the neighbor aggregate $\mathcal{A}Z c_1$ affects both), structural position causally influences treatment assignment and outcomes simultaneously. This is precisely the setting where Veitch et al.~\cite{veitch2019using} showed that network embeddings can serve as valid proxy confounders. GPE makes this confounding signal explicitly available.
 
 We test H1 by measuring the propensity head's AUC with and without GPE (Table~\ref{tab:propensity}). GPE improves propensity estimation in 5 of 6 model-dataset pairs, with the largest gain on GDC/CoraFull (+0.138 AUC). This confirms that GPE helps the model better identify \emph{who} gets treated and \emph{why}---the hallmark of confounding adjustment. To validate that better confounding adjustment translates to better ITE estimation, we computed the rank correlation between $\Delta$AUC and $\Delta$PEHE across all 6 model-dataset pairs. The Spearman correlation is $r_s = 0.83$ ($p = 0.04$), confirming a statistically significant link between propensity improvement and treatment effect accuracy.
 
