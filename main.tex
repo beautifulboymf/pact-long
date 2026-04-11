@@ -23,7 +23,7 @@
 
 \begin{document}
 
-\title{Graph Positional Encoding and Variance-Weighted Learning\\as Universal Plug-ins for Uplift Modeling}
+\title{Graph Positional Encoding and Variance-Weighted Learning\\as General-Purpose Plug-ins for Uplift Modeling}
 
 \begin{CCSXML}
 <ccs2012>
@@ -248,7 +248,7 @@ PubMed & 0.15 & 0.07 & 0.025 & 0.035 \\
 
 \textbf{Training protocol.} All models are trained with Adam ($\text{lr}{=}10^{-3}$, weight decay $10^{-4}$, gradient clipping at norm 5) for 200 epochs with 60/20/20 train/val/test splits. Graph experiments use 3 random seeds; tabular experiments use 5. Early stopping selects on validation PEHE (graph) or validation Qini (tabular). Primary metrics: rooted PEHE ($\downarrow$), absolute ATE error ($\downarrow$), Qini coefficient ($\uparrow$).
 
-\subsection{GPE as Universal Plug-in}
+\subsection{GPE as a General-Purpose Plug-in}
 
 Table~\ref{tab:main} reports rooted PEHE (mean over 3 seeds) across all nine dataset $\times$ noise-level combinations. GPE consistently reduces PEHE across all base models \emph{except} BNN.
 
@@ -458,14 +458,14 @@ A legitimate concern is whether GPE and variance weighting are merely two indepe
 
 In networked observational data, a node's structural position simultaneously affects three quantities:
 \begin{enumerate}
-    \item \emph{Treatment assignment}: nodes in certain communities or structural roles are more likely to receive treatment (the confounding path);
-    \item \emph{Potential outcomes}: the treatment effect itself varies by position---community members may amplify or dampen each other's responses (the heterogeneity path);
-    \item \emph{Outcome noise}: behavior volatility is position-dependent---hub users with many connections exhibit more erratic engagement patterns than peripheral users (the heteroscedasticity path).
+    \item \emph{Treatment assignment} (confounding path, addressed by \textbf{GPE}): nodes in certain communities or structural roles are more likely to receive treatment. GPE makes this confounding structure observable, improving propensity estimation by up to +0.139 AUC on GDC/CoraFull (Table~\ref{tab:propensity});
+    \item \emph{Potential outcomes} (heterogeneity path, addressed by \textbf{GPE}): the treatment effect itself varies by position---community members may amplify or dampen each other's responses. The BNN exception confirms this mechanism: BNN's shared S-learner head cannot condition treatment response on position separately, yielding no gain from GPE;
+    \item \emph{Outcome noise} (heteroscedasticity path, addressed by \textbf{Variance Weighting}): behavior volatility is position-dependent. Our DGP makes this explicit: $\varepsilon \sim \mathcal{N}(0, \sigma(Z))$ where $\sigma$ is derived from the dot product of the SVD-compressed features $Z$ with a random direction vector, confirming that noise variance is structurally determined. The 4$\times$ Qini improvement on continuous Hillstrom spend outcomes (Table~\ref{tab:tabular}) provides direct real-world confirmation.
 \end{enumerate}
 
-GPE addresses paths (1) and (2) by making positional information explicitly available to the model's prediction heads (confirmed by the propensity AUC improvement in Table~\ref{tab:propensity}). Variance weighting addresses path (3) by down-weighting samples whose outcomes are inherently noisy, regardless of the model's structural awareness.
+GPE addresses paths (1) and (2) by injecting positional information into the model's prediction heads; variance weighting addresses path (3) by down-weighting samples whose outcomes are inherently noisy. The two modules are complementary because they target \emph{different downstream consequences of the same root cause}, rather than attacking the same problem from two angles.
 
-This dual-root structure explains the empirical synergy pattern observed in Table~\ref{tab:var}: at low noise ($\rho{=}5$), confounding dominates and GPE alone suffices. At high noise ($\rho{=}30$), GPE amplifies both the structural signal \emph{and} the position-correlated noise---the very noise that variance weighting is designed to suppress. Their combination is synergistic precisely because they address different downstream consequences of the same underlying cause, rather than attacking the same problem from two angles. This is why GDC+GPE+Var achieves its strongest gains at $\rho{=}30$ (PEHE 2.99 vs.\ 4.31 vanilla on PubMed), where both failure modes are simultaneously active.
+This dual-root structure explains the empirical synergy at high noise: at $\rho{=}5$, confounding dominates and GPE alone suffices. At $\rho{=}30$ on PubMed, GPE alone \emph{increases} PEHE from 4.31 to 4.80 because it amplifies the structural signal that is now corrupted by heavy position-dependent noise. Adding variance weighting recovers this loss and achieves 2.99---a 31\% net improvement---because it specifically targets the noisy samples that GPE's enhanced representations have made the model overfit to. The combination works because GPE provides the signal and variance weighting prevents the position-correlated noise from corrupting it.
 
 \subsection{Practical Guidelines for RecSys Practitioners}
 
