@@ -415,16 +415,38 @@ Depth $L$ & PEHE \\
 
 The relationship between depth and PEHE follows a U-shaped curve. Shallow networks ($L{=}1$) underperform because they cannot capture multi-hop treatment spillover. Performance is optimal at $L \in \{2, 3\}$, where the receptive field covers the most informative neighborhood range. Deeper networks ($L{=}5, 7$) degrade due to over-smoothing: at $L{=}7$, PEHE rises to 2.98, a 70\% increase over $L{=}3$. Our default $L{=}5$ (PEHE 2.23) trades a modest accuracy loss for a receptive field that matches the 5-hop spillover horizon in the DGP; the optimal depth in deployment should be tuned to the anticipated interference radius. This finding directly addresses the concern that deeper architectures are not always beneficial.
 
-\subsection{Representation Visualization}
+\subsection{Why Does GPE Work? A Mechanism Analysis}\label{sec:mechanism}
 
-Figure~\ref{fig:tsne} provides qualitative evidence for GPE's effect on learned representations. Without GPE, nodes from different communities are intermixed in the embedding space, making it difficult for downstream heads to distinguish community-driven treatment heterogeneity. With GPE, communities form visually distinct clusters, confirming that the cross-attention fusion successfully injects community structure into the representation before GNN processing.
+A natural question is \emph{how} GPE improves ITE estimation. We test three competing hypotheses through targeted experiments on DBLP and CoraFull ($\rho{=}10$, 3 seeds).
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=0.95\linewidth]{images/tsne_gpe.png}
-    \caption{t-SNE visualization of node representations on DBLP. Without GPE (left), communities are intermixed. With GPE (right), communities form distinct clusters, confirming that GPE captures community structure relevant for heterogeneous treatment effects.}
-    \label{fig:tsne}
-\end{figure}
+\textbf{H1: Confounding debiasing.} Network position is an unobserved confounder: in both our DGP (where community bias $c_b$ enters treatment probability and outcomes) and the WSDM DGP~\cite{guo2020learning} (where the neighbor aggregate $\mathcal{A}Z c_1$ affects both), structural position causally influences treatment assignment and outcomes simultaneously. This is precisely the setting where Veitch et al.\ showed that network embeddings can serve as valid proxy confounders. GPE makes this confounding signal explicitly available.
+
+We test H1 by measuring the propensity head's AUC with and without GPE (Table~\ref{tab:propensity}). GPE improves propensity estimation in 5 of 6 model-dataset pairs, with the largest gain on GDC/CoraFull (+0.139 AUC). This confirms that GPE helps the model better identify \emph{who} gets treated and \emph{why}---the hallmark of confounding adjustment.
+
+\begin{table}[t]
+\caption{Propensity AUC ($\uparrow$) with and without GPE. Higher AUC indicates better capture of treatment assignment confounders.}
+\label{tab:propensity}
+\centering
+\footnotesize
+\begin{tabular}{@{}llcc@{}}
+\toprule
+Model & Dataset & No GPE & +GPE \\
+\midrule
+TARNet & DBLP & 0.620$^{\pm.019}$ & \textbf{0.644}$^{\pm.010}$ \\
+GDC & DBLP & 0.458$^{\pm.108}$ & \textbf{0.535}$^{\pm.020}$ \\
+X-learner & DBLP & 0.621$^{\pm.014}$ & 0.621$^{\pm.018}$ \\
+TARNet & CoraFull & 0.656$^{\pm.006}$ & \textbf{0.692}$^{\pm.005}$ \\
+GDC & CoraFull & 0.468$^{\pm.092}$ & \textbf{0.606}$^{\pm.051}$ \\
+X-learner & CoraFull & 0.641$^{\pm.023}$ & \textbf{0.689}$^{\pm.008}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{H2: Representation balancing---rejected.} One might expect GPE to reduce the distributional gap between treated and control representations, similar to Wasserstein regularization~\cite{guo2020learning} or adversarial balancing~\cite{chu2021graph}. We measured the Maximum Mean Discrepancy (MMD) between $T{=}1$ and $T{=}0$ representations and found the opposite: GPE \emph{increases} MMD in all 6 comparisons (ratios 1.12--1.49$\times$). GPE does not work through representation balancing; it preserves treatment-group differences while making them more informative for outcome prediction. This distinguishes our approach from the entire prior line of balancing-based methods.
+
+\textbf{H3: Positional signal vs.\ attention architecture.} To isolate whether the cross-attention design matters or whether simply adding positional features suffices, we compared three TARNet variants on DBLP: (a)~vanilla (no position), (b)~concatenating node2vec to features, and (c)~full GPE cross-attention. Concatenation achieves PEHE 2.10$^{\pm.10}$, slightly outperforming GPE attention (2.32$^{\pm.02}$), while vanilla scores 2.65$^{\pm.14}$. The positional signal itself is the primary driver of improvement; cross-attention trades a small PEHE premium for 4$\times$ lower variance across seeds---a valuable stability property for production systems.
+
+\textbf{Unified mechanism.} GPE works through \emph{confounding debiasing}: node2vec embeddings encode the structural position that acts as an unobserved confounder in networked treatment settings. This explains both (i)~why GPE helps on our DGP (explicit community confounders) \emph{and} on the WSDM benchmarks (implicit structural confounders via neighbor aggregation $\mathcal{A}Z c_1$), and (ii)~why BNN fails to benefit (its shared $\mu(X,T)$ head cannot use position to differentially condition treatment-specific predictions). The mechanism is distinct from representation balancing and does not require the attention architecture---any method of injecting positional information would help, though cross-attention adds stability.
 
 %% ====================================================================
 \section{Discussion}\label{sec:discuss}
