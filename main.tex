@@ -228,7 +228,7 @@ As shown in Figure~\ref{fig:arch}, our framework enhances any base model $M$ thr
 
 \textbf{Graph datasets.} We employ five graph datasets with semi-synthetic treatment outcomes, summarized in Table~\ref{tab:datasets}. Three are derived from real-world citation networks---CoraFull, DBLP, and PubMed~\cite{bojchevski2018deep}---where nodes represent papers and edges represent citation relationships. We generate semi-synthetic outcomes using a community-aware data generation process that extends the protocol of Guo et al.~\cite{guo2020learning} in three ways: (i)~Louvain community detection~\cite{blondel2008fast} with intra-community edge weight boosting ($\times 3$), (ii)~multi-hop treatment spillover via normalized adjacency powers up to 5 hops, and (iii)~per-node heteroscedastic noise $\varepsilon_i \sim \mathcal{N}(0, \sigma(Z_i))$ where the noise scale is derived from SVD-compressed node features projected onto a random direction and linearly mapped to $[-\rho, \rho]$. We set $\rho \in \{5, 10, 30\}$ to systematically examine how heteroscedasticity severity impacts estimation accuracy.
 
-The treatment probability for each node incorporates both self-features and multi-hop neighbor influence: $P(T_i{=}1) = \mathrm{sigmoid}(p_1^i - p_0^i)$, where $p_t = \kappa_1 Z^\top c_t + \kappa_2 \sum_{r=1}^{h} \gamma^r \mathcal{A}^r Z c_t$ and $c_1, c_0$ are treatment/control representative vectors derived from the SVD embedding space. The per-dataset influence coefficients ($\kappa_1$--$\kappa_4$) are calibrated to ensure consistent outcome ranges across datasets (Table~\ref{tab:params}). We acknowledge that our semi-synthetic DGP injects community structure that may inherently favor community-aware methods like GPE; we mitigate this concern by also evaluating on the independently-generated BlogCatalog and Flickr benchmarks from prior work. These two standard benchmarks---BlogCatalog (5,196 nodes) and Flickr (7,575)---follow the original generation protocol of Guo et al.~\cite{guo2020learning}.
+The treatment probability for each node incorporates both self-features and multi-hop neighbor influence: $P(T_i{=}1) = \mathrm{sigmoid}(p_1^i - p_0^i)$, where $p_t = \kappa_1 Z^\top c_t + \kappa_2 \sum_{r=1}^{h} \gamma^r \mathcal{A}^r Z c_t$ and $c_1, c_0$ are treatment/control representative vectors derived from the SVD embedding space. DGP parameters are calibrated per dataset to ensure consistent outcome ranges (full specification in supplementary materials).\footnote{Shared parameters: $C{=}5$, $\beta_0{=}{-}0.3$, $\beta_1{=}0.3$, $\gamma{=}0.6$, hops${=}5$.} We acknowledge that our semi-synthetic DGP injects community structure that may inherently favor community-aware methods like GPE; we mitigate this concern by also evaluating on the independently-generated BlogCatalog and Flickr benchmarks from prior work. These two standard benchmarks---BlogCatalog (5,196 nodes) and Flickr (7,575)---follow the original generation protocol of Guo et al.~\cite{guo2020learning}.
 
 \begin{table}[t]
 \caption{Dataset statistics. Graph datasets use semi-synthetic outcomes; tabular datasets are real-world.}
@@ -254,27 +254,11 @@ X5 & tabular & 200K & --- & 12 & binary \\
 \end{tabular}
 \end{table}
 
-\begin{table}[t]
-\caption{Semi-synthetic DGP parameters. Shared: $C\!=\!5$, $\beta_0\!=\!{-}0.3$, $\beta_1\!=\!0.3$, $\gamma\!=\!0.6$, hops$\,{=}\,5$.}
-\label{tab:params}
-\centering
-\footnotesize
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-Dataset & $\kappa_1$ & $\kappa_2$ & $\kappa_3$ & $\kappa_4$ \\
-\midrule
-CoraFull & 0.2 & 0.1 & 0.03 & 0.05 \\
-DBLP & 1.5 & 0.75 & 0.2 & 0.3 \\
-PubMed & 0.15 & 0.07 & 0.025 & 0.035 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
 \textbf{Tabular datasets.} To validate variance weighting on real-world data without graph structure, we evaluate on five tabular uplift benchmarks across six evaluation settings (Table~\ref{tab:datasets}): Criteo Uplift (1M rows, binary conversion), Hillstrom (42K, evaluated on both binary visit and continuous spend outcomes), RetailHero (200K, binary purchase), Lenta (690K, binary response), and X5 (200K, binary purchase with enriched features). For binary outcomes we apply the Bernoulli variance adaptation ($\sigma^2 = \mu(1-\mu)$); for the continuous Hillstrom spend outcome we use the learned $\log\sigma^2$ head.
 
 \textbf{Base models.} We test seven GNN-based ITE estimators spanning the timeline from 2016 to 2025: \emph{meta-learners}---BNN~\cite{johansson2016learning} (S-learner), TARNet~\cite{shalit2017estimating} (T-learner), and X-learner~\cite{kunzel2019metalearners}; \emph{graph causal models}---NetDeconf~\cite{guo2020learning} (GCN with Wasserstein balancing), GIAL~\cite{chu2021graph} (MI maximization and adversarial balancing), GNUM~\cite{zhu2023gnum} (transformed-target estimation), and GDC~\cite{hu2025gdc} (feature disentanglement, current SOTA). We also evaluate CAVIN (\textbf{C}ommunity-\textbf{A}ware \textbf{V}ariance-weighted \textbf{I}TE \textbf{N}etwork), our combined configuration (X-learner + GPE + Var). For a controlled comparison, all models share the same GNN backbone: a 5-layer GAT with hidden dimensions [256,128,128,128,128], 4-head attention, and 4-layer MLP outcome heads (hidden size 128). GPE uses 128-dimensional node2vec embeddings (100 walks, length 30, window 10) with 4-head cross-attention at dimension 256.
 
-\textbf{Training protocol.} All models are trained with Adam ($\text{lr}{=}10^{-3}$, weight decay $10^{-4}$, gradient clipping at norm 5) for 200 epochs with 60/20/20 train/val/test splits. All graph experiments use 5 random seeds; we report mean $\pm$ standard deviation. Tabular experiments also use 5 seeds. Early stopping selects on validation PEHE (graph) or validation Qini (tabular). Primary metrics: rooted PEHE ($\downarrow$), absolute ATE error ($\downarrow$), Qini coefficient ($\uparrow$).
+\textbf{Training protocol.} All models are trained with Adam ($\text{lr}{=}10^{-3}$, weight decay $10^{-4}$, gradient clipping at norm 5) for 200 epochs with 60/20/20 train/val/test splits. All graph experiments use 5 random seeds; we report mean $\pm$ standard deviation. Tabular experiments also use 5 seeds. Early stopping selects on validation PEHE (graph) or validation Qini (tabular). Primary metrics: rooted PEHE ($\downarrow$), absolute ATE error ($\downarrow$), Qini coefficient ($\uparrow$). Extended ablation studies, statistical analyses, and additional visualizations are available in the supplementary materials at \url{https://anonymous.4open.science/r/CAVIN}.
 
 \subsection{GPE as a Modular Plug-in}
 
@@ -344,7 +328,9 @@ BNN (S-learner) & 1/9 & 0/2 & 1/11 \\
 
 \textbf{Why does BNN not benefit?} BNN is an S-learner: a single model $\mu(X, T)$ concatenates the treatment indicator with node features. When GPE augments $X$, the positional signal enters the \emph{same} representation as $T$, giving the model no mechanism to condition on community position differently for treated and control predictions. T-learner variants (TARNet, X-learner, GDC) maintain separate heads for $\mu_0$ and $\mu_1$, so each head can independently learn how community membership modulates the treatment-specific response---which is exactly the information GPE provides. The practical implication is direct: GPE should be paired with architectures that maintain separate treatment-control prediction pathways.
 
-\textbf{Comparison with published results.} On BlogCatalog, our TARNet+GPE achieves PEHE of 8.05 versus GDC's published 3.50~\cite{hu2025gdc}. This gap is expected: TARNet+GPE is architecturally far simpler (no disentanglement, no treatment-conditioned aggregation). The more informative comparison is on CoraFull/DBLP/PubMed, where GDC+GPE consistently improves over vanilla GDC---confirming that positional context provides value orthogonal to GDC's own design.
+\textbf{Comparison with BlogCatalog/Flickr benchmarks.} On the independently-generated WSDM benchmarks (BlogCatalog, Flickr~\cite{guo2020learning}), GPE-enhanced models improve over vanilla on the majority of models tested: TARNet+GPE achieves 8.05 versus 9.04 on BlogCatalog and 11.40 versus 11.75 on Flickr. NetDeconf and GIAL show 0/2 win rates on these benchmarks despite 8/9 on our DGP---both employ explicit representation balancing (Wasserstein and adversarial respectively), and on lower-modularity graphs the proxy signal can conflict with the balancing objective rather than complement it. This cross-DGP consistency matters: the WSDM DGP contains no explicit community bias, no Louvain detection, and no intra-community edge boosting, yet GPE still improves the majority of models, ruling out DGP circularity as the primary explanation.
+
+Across all 54 non-BNN cells, the aggregate improvement is highly significant (Wilcoxon signed-rank test $p < 10^{-5}$; sign test $p < 10^{-5}$), confirming that GPE's benefit is a consistent broad pattern rather than a few strong outliers. Individual cells often do not reach significance with 5 seeds, reflecting modest per-cell effect sizes.
 
 \subsection{Variance Weighting: Complementing GPE}\label{sec:var_exp}
 
@@ -445,49 +431,13 @@ The dual-root perspective translates into concrete deployment heuristics.
 
 \subsection{Design Choices and Robustness}
 
-Several design choices in our implementation merit discussion, particularly in light of alternative approaches raised in prior work.
+\textbf{PE method.} On DBLP ($\rho{=}10$, 5~seeds), node2vec ($2.37^{\pm.10}$), Laplacian eigenvectors ($2.27^{\pm.16}$), and degree$+$PageRank ($2.37^{\pm.36}$) all improve over no-PE (PEHE $2.47$), confirming Proposition~\ref{prop:dualroot}(a): the positional signal matters more than the specific encoding method. Full results across PE variants are in the supplementary materials.
 
-\textbf{Does the PE method matter?}
-Proposition~\ref{prop:dualroot}(a) predicts that \emph{any} proxy for $Z^*$ should reduce confounding bias. We tested this by replacing node2vec with two alternatives in the GPE module on DBLP ($\rho{=}10$, 5~seeds): (i)~degree$+$PageRank features (a coarse structural summary, random-projected to 128~dims), and (ii)~Laplacian eigenvectors (the top-128 eigenvectors of the normalized graph Laplacian). All three PE methods improve over no-PE (PEHE 2.47): Laplacian achieves $2.27^{\pm.16}$, node2vec $2.37^{\pm.10}$, and degree$+$PageRank $2.37^{\pm.36}$. The differences between methods are small relative to the gap from no-PE, confirming that \emph{the positional signal matters more than the specific encoding method}. We retain node2vec as the default for its practical advantages: biased random walks capture both structural equivalence and community membership, embeddings are pre-computed offline without GPU resources (${\sim}2$~min for a 5K-node graph), and results are robust to embedding dimensions from 64 to 256 (default: 128, $p{=}1, q{=}1$, 100 walks of length 30).
+\textbf{Concatenation vs.\ cross-attention.} Concatenation achieves slightly lower mean PEHE ($2.10$ vs.\ $2.32$, Section~\ref{sec:mechanism}), while cross-attention reduces cross-seed variance by $4{\times}$. We recommend concatenation at scale for its $O(n)$ complexity; cross-attention is preferred when training stability is the priority.
 
-\textbf{Why cross-attention fusion instead of concatenation?}
-Concatenation assigns each node its own positional encoding without any cross-node interaction at the fusion stage. Cross-attention (features as queries, positions as keys/values) allows every node to attend over the positional context of \emph{all other nodes}, providing a global receptive field before any GNN message-passing occurs. Our H3 ablation (Section~\ref{sec:mechanism}) reveals that concatenation slightly outperforms cross-attention in mean PEHE on DBLP ($2.10$ vs.\ $2.32$), but cross-attention achieves $4{\times}$ lower cross-seed variance---a valuable stability property for production systems where training-to-training consistency matters. At scale, concatenation's $O(n)$ complexity makes it the pragmatic default; cross-attention is recommended when the graph fits in memory and stability is prioritized. The theoretical contribution of GPE is the positional signal itself---not the fusion mechanism---so the choice between concatenation and cross-attention is an engineering decision, not a scientific one.
+\textbf{Relationship to graph transformers.} To test whether GPE adds value when the backbone already encodes position, we replaced the GAT backbone with a sparse Graphormer-style transformer (learned degree centrality encoding) and evaluated TARNet on DBLP ($\rho{=}10$, 5~seeds). The position-aware backbone alone ($1.95^{\pm.13}$) outperforms GAT ($2.43^{\pm.24}$), confirming that native positional encoding improves causal estimation. GPE substantially improves GAT ($2.43 \to 2.20$, $-9\%$) but \emph{does not} improve the position-aware backbone ($1.95 \to 2.06$). GPE's value is specific to position-unaware GNN architectures; when the backbone already captures position natively, GPE's signal is redundant. This result independently validates our causal model: any proxy for $Z^*$ helps, whether injected externally (GPE) or learned internally (Graphormer-style attention).
 
-\textbf{Depth and variance floor.} Our depth sensitivity analysis on DBLP ($\rho{=}10$, TARNet+GPE) shows a U-shaped curve: $L{=}3$ is optimal (PEHE $1.75$), while our default $L{=}5$ (PEHE $2.23$) trades accuracy for a receptive field matching the DGP's 5-hop spillover. In deployment, $L \in \{2,3\}$ is likely sufficient. The variance floor $\delta{=}0.01$ balances stability against information loss; values below 0.001 caused instability, above 0.1 collapsed to uniform weighting.
-
-\textbf{Relationship to graph transformers.}
-Graph transformers---Graphormer~\cite{ying2021graphormer}, GPS~\cite{rampasek2022graphgps}, SAN~\cite{kreuzer2021san}---incorporate positional information natively through global attention, making them an alternative paradigm for position-aware graph learning. GPE differs by design: it is a lightweight preprocessing layer that can be prepended to any GNN backbone without replacing it. To test whether GPE adds value when the backbone is already position-aware, we replaced the GAT backbone with a sparse graph transformer (scaled dot-product attention over edges with learned degree centrality encoding, following Graphormer's design; we term this variant ``Graphformer'' to distinguish it from the full Graphormer model) and evaluated TARNet on DBLP ($\rho{=}10$, 5~seeds). The Graphformer backbone alone ($1.95^{\pm.13}$) outperforms GAT ($2.43^{\pm.24}$), confirming that native positional encoding improves causal estimation. GPE substantially improves GAT ($2.43 \to 2.20$, $-9\%$), but \emph{does not} improve the Graphformer backbone ($1.95 \to 2.06$). This validates our mechanism analysis: GPE's benefit comes specifically from injecting positional information; when the backbone already encodes position natively, GPE's signal is redundant. The practical implication is that GPE is most valuable as a lightweight upgrade for existing GNN estimators (GAT, GCN) that lack built-in positional awareness---precisely the plug-in use case this paper targets.
-
-\textbf{Cross-fitting and overhead.} Gradient detachment in Algorithm~\ref{alg:cavin} is critical: without it, the variance head collapsed to near-zero within 20 epochs. Total wall-clock overhead is ${\sim}15\%$ (8--12\% for GPE cross-attention, 3--5\% for the variance head), with node2vec pre-computed offline (${\sim}2$~min for 5K nodes, ${\sim}18$~min for 20K).
-
-\subsection{Comparison with the Standard Benchmarks}
-
-On BlogCatalog and Flickr~\cite{guo2020learning}, GPE-enhanced models improve over their vanilla counterparts on a majority of models tested. TARNet+GPE achieves 8.05 versus 9.04 on BlogCatalog and 11.40 versus 11.75 on Flickr; GDC+GPE achieves 4.20 versus 4.57 on BlogCatalog. GDC's published PEHE of 3.01~\cite{hu2025gdc} on BlogCatalog uses a different data generation seed and train/test split ratio, making direct comparison unreliable. Two models---NetDeconf and GIAL---show 0/2 win rates on these benchmarks, despite achieving 8/9 on our DGP. Both employ explicit representation balancing (Wasserstein and adversarial respectively), which our H2 analysis shows operates through a different mechanism than GPE's confounding debiasing. On graphs where the WSDM DGP generates weaker positional confounding (BlogCatalog has lower modularity than CoraFull/DBLP), GPE's proxy signal may conflict with the balancing objective rather than complement it. For models without built-in balancing (TARNet, GNUM, GDC), GPE improves on the majority of BlogCatalog/Flickr settings. Crucially, this cross-DGP consistency is the strongest evidence against DGP circularity: the WSDM DGP contains no explicit community bias ($\kappa_4{=}0$), no Louvain detection, and no intra-community edge boosting---every community-aware component present in our semi-synthetic design is absent---yet GPE still improves the majority of models.
-
-\subsection{DGP Circularity Ablation}
-
-A legitimate concern is that our semi-synthetic DGP injects community structure via Louvain detection and intra-community edge boosting---exactly the structure that GPE (via node2vec) is designed to capture. To test this directly, we re-ran TARNet and GDC (with and without GPE) on a modified DGP that \emph{removes all community structure}: $\kappa_4{=}0$ (no community bias) and intra-community edge weight $=1.0$ (no edge boosting), at $\rho{=}10$, 5~seeds.
-
-\begin{table}[t]
-\caption{GPE on a community-free DGP ($\kappa_4{=}0$, no edge boosting, $\rho{=}10$, 5~seeds). \textbf{Bold} = +GPE improves over vanilla.}
-\label{tab:nocommunity}
-\centering
-\footnotesize
-\begin{tabular}{@{}llcc@{}}
-\toprule
-Model & Dataset & Vanilla & +GPE \\
-\midrule
-TARNet & CoraFull & $3.02^{\pm.27}$ & $\mathbf{2.51}^{\pm.19}$ \\
-TARNet & DBLP & $2.46^{\pm.21}$ & $2.47^{\pm.28}$ \\
-TARNet & PubMed & $3.54^{\pm.61}$ & $\mathbf{3.15}^{\pm.64}$ \\
-GDC$^\star$ & CoraFull & $3.85^{\pm.28}$ & $\mathbf{3.24}^{\pm.32}$ \\
-GDC$^\star$ & DBLP & $3.11^{\pm.17}$ & $\mathbf{2.74}^{\pm.25}$ \\
-GDC$^\star$ & PubMed & $2.49^{\pm.12}$ & $2.53^{\pm.74}$ \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-GPE improves PEHE in 4 of 6 comparisons (Table~\ref{tab:nocommunity}), with reductions up to 17\% on CoraFull. The two neutral cases (DBLP/TARNet, PubMed/GDC) occur when the baseline is already strong on the simpler DGP. This confirms that GPE captures structural confounding \emph{beyond} explicit community bias: node2vec embeddings encode structural roles (hub vs.\ peripheral, bridge vs.\ cluster member) that correlate with treatment assignment and outcomes independently of the community detection that our semi-synthetic DGP uses.
+A no-community DGP ablation ($\kappa_4{=}0$, no edge boosting) shows GPE improves 4/6 settings even without explicit community structure, confirming that node2vec captures structural roles (hub vs.\ peripheral, bridge vs.\ cluster member) beyond community membership (see supplementary materials for full results).
 
 %% ====================================================================
 \section{Limitations and Future Work}\label{sec:limit}
@@ -501,7 +451,7 @@ GPE improves PEHE in 4 of 6 comparisons (Table~\ref{tab:nocommunity}), with redu
 
 \textbf{PE method scope.} Our PE comparison (Section~\ref{sec:discuss}) shows that node2vec, Laplacian eigenvectors, and degree$+$PageRank all improve ITE estimation comparably, confirming that the positional signal matters more than the encoding method. However, this comparison covers only one dataset and one base model; broader evaluation across datasets and learned PE methods (LSPE, SignNet) would strengthen this finding.
 
-\textbf{Community structure dependence.} Our no-community ablation (Table~\ref{tab:nocommunity}) shows GPE helps even without explicit community structure (4/6 wins), but the gains are smaller than on the standard DGP. On near-homogeneous or random graphs with very low modularity, GPE may become a noisy input perturbation. Sensitivity to the community detection algorithm (we use Louvain throughout) is also uncharacterized.
+\textbf{Community structure dependence.} Our no-community DGP ablation shows GPE helps even without explicit community structure (4/6 wins; full results in supplementary materials), but the gains are smaller than on the standard DGP. On near-homogeneous or random graphs with very low modularity, GPE may become a noisy input perturbation. Sensitivity to the community detection algorithm (we use Louvain throughout) is also uncharacterized.
 
 \textbf{Scalability.} The cross-attention in GPE has $O(n^2)$ node complexity. For production systems, we recommend defaulting to concatenation fusion (Section~\ref{sec:discuss}), which is $O(n)$ and empirically achieves comparable mean PEHE (Section~\ref{sec:mechanism}, H3). Mini-batching or linear-attention approximations are alternatives for settings where the cross-attention's stability benefits are desired at scale.
 
