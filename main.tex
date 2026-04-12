@@ -82,10 +82,10 @@ We validate the paradigm through a controlled plug-in evaluation on seven base m
 %% ====================================================================
 
 \textbf{ITE estimation and uplift modeling.}
-Traditional approaches span tree-based methods~\cite{radcliffe2011real, athey2016recursive}, combinatorial formulations~\cite{goldenberg2020free, 10.1145/3511808.3557100}, and meta-learners~\cite{kunzel2019metalearners, kennedy2023towards}. Deep learning variants---BNN~\cite{johansson2016learning}, TARNet/CFRNet~\cite{shalit2017estimating}, SNet~\cite{curth2021nonparametric}, TNet~\cite{chen2024doubly}, and EFIN~\cite{liu2023explicit}---largely follow the meta-learner framework, using neural networks to estimate the components of S-, T-, X-, or DR-learners. The R-Learner~\cite{nie2021rlearner} established that variance-weighted pseudo-outcome regression achieves quasi-oracle convergence rates, providing the theoretical foundation for our variance-weighted module. In the recommendation domain, E3IR~\cite{sun2024e3ir} couples uplift prediction with budget-constrained allocation via differentiable ILP, and CDUM~\cite{meng2025cdum} introduces coarse-to-fine dynamic uplift for real-time video recommendation at scale. Neither uses graph structure---our modules address the orthogonal problem of representation quality for any graph-based estimator feeding such systems. All of these methods assume i.i.d.\ samples, which is untenable in social recommendation settings where users influence each other's response to treatment.
+Traditional approaches span tree-based methods~\cite{radcliffe2011real, athey2016recursive} and meta-learners~\cite{kunzel2019metalearners, kennedy2023towards}. Deep learning variants---BNN~\cite{johansson2016learning}, TARNet/CFRNet~\cite{shalit2017estimating}, SNet~\cite{curth2021nonparametric}---follow the meta-learner framework. The R-Learner~\cite{nie2021rlearner} established that variance-weighted pseudo-outcome regression achieves quasi-oracle convergence rates, providing the theoretical foundation for our variance-weighted module. In recommendation, E3IR~\cite{sun2024e3ir} and CDUM~\cite{meng2025cdum} couple uplift with allocation and real-time optimization respectively, but neither uses graph structure. All of these methods assume i.i.d.\ samples, untenable in social settings with network interference.
 
 \textbf{Causal inference under network interference.}
-Hudgens \& Halloran~\cite{hudgens2008toward} formalized partial interference within predefined clusters; graph-structured settings require more flexible assumptions. Guo et al.~\cite{guo2020learning} pioneered GCN-based network deconfounding with Wasserstein balancing and established the BlogCatalog/Flickr benchmarks that remain standard today. Subsequent work has pursued several complementary directions: Ma et al.~\cite{ma2021causal} combined GNNs with representation learning for policy-level intervention; Huang et al.~\cite{huang2023modeling} used attention-based aggregation to model heterogeneous peer effects; GIAL~\cite{chu2021graph} added mutual-information maximization and adversarial balancing for imbalanced treatment assignments; GNUM~\cite{zhu2023gnum} proposed a transformed-target estimator for direct uplift prediction; and Zhao et al.~\cite{zhao2024learning} incorporated sample reweighting with attention. IGL~\cite{sui2024invariant} addressed cross-domain generalization via environment-invariant representations. The current state-of-the-art, GDC~\cite{hu2025gdc} (WSDM~2025), disentangles node representations into adjustment and confounder components via learnable masks and treatment-conditioned aggregators. Concurrently, SPNet~\cite{huang2023modeling} models heterogeneous spillover magnitudes via a two-channel GCN with masked attention, and CauGramer~\cite{wu2025caugramer} (ICLR~2025) proposes a full causal graph Transformer with minimax moment constraints for unknown interference---requiring a complete architecture replacement. Every one of these methods introduces a complete, architecturally inseparable design---improvements do not compose across models. We take the orthogonal position: developing modular components that augment \emph{any} of them.
+Guo et al.~\cite{guo2020learning} pioneered GCN-based network deconfounding with Wasserstein balancing. Subsequent work includes GIAL~\cite{chu2021graph} (adversarial balancing), GNUM~\cite{zhu2023gnum} (transformed-target estimation), and the current SOTA GDC~\cite{hu2025gdc} (WSDM~2025, feature disentanglement). CauGramer~\cite{wu2025caugramer} (ICLR~2025) proposes a full causal graph Transformer with minimax moment constraints---requiring complete architecture replacement. Every one of these methods introduces a monolithic design whose improvements do not compose across models. We take the orthogonal position: modular components that augment \emph{any} of them.
 
 \textbf{Positional and structural encoding in GNNs.}
 Standard message-passing GNNs cannot distinguish structurally equivalent nodes that occupy different global positions~\cite{velickovic2017graph}, a limitation addressed by a rich line of graph transformer work. Graphormer~\cite{ying2021graphormer} encodes centrality, spatial distance, and edge features directly into the attention mechanism. SAN~\cite{kreuzer2021san} uses Laplacian eigenvectors as spectral PE with eigenvalue-reweighted attention, though sign ambiguity in eigenvectors must be handled carefully---SignNet~\cite{lim2023signnet} resolves this with provably sign-invariant architectures. GraphGPS~\cite{rampasek2022graphgps} provides a modular recipe combining PE, local message-passing, and global attention. In recommendation, PGTR~\cite{chen2025pgtr} augments LightGCN with spectral, degree, PageRank, and type encodings for collaborative filtering. Our GPE differs from all of these in two ways: it is a lightweight plug-in module prepended to \emph{existing} GNN backbones rather than a full architecture replacement, and it targets the causal ITE setting where positional context must condition representations \emph{differentially} for treatment and control groups. Node2vec~\cite{grover2016node2vec} generates position-aware embeddings via biased random walks; we adopt it for its ability to capture both structural equivalence and community membership, and for its offline pre-computation convenience in industrial pipelines. To our knowledge, positional encodings have not been studied as a plug-in enhancement for causal GNNs.
@@ -93,7 +93,7 @@ Standard message-passing GNNs cannot distinguish structurally equivalent nodes t
 \textbf{Heteroscedastic noise in deep learning.}
 Modeling input-dependent noise variance in neural networks dates to Nix \& Weigend (1994) and has been revisited in the multi-task uncertainty weighting framework of Kendall \& Gal~\cite{kendall2018multi}. In the ITE literature, variance-weighted estimators have been explored for tabular settings~\cite{SHI2024111679, mo2022efficient, abrevaya2023estimation}; their adaptation to graph-based estimation is unexplored. Two practical challenges distinguish our setting from prior work: the regression target (pseudo-treatment effect $D_i$) is itself a noisy estimate rather than a direct observation, and binary outcomes require a fundamentally different variance structure. We address both---the former via $\log \sigma^2$ parameterization with gradient-isolated cross-fitting, the latter via analytical Bernoulli variance $\sigma^2 = \mu(1-\mu)$.
 
-\textbf{Positioning.} We contribute two modular enhancements---one at the input level (GPE) and one at the loss level (variance weighting)---and validate them across the full spectrum of existing architectures. The plug-and-play paradigm has proven valuable in adjacent recommendation work: Lighter-X~\cite{zheng2025lighterx} demonstrates that decoupled propagation modules improve graph-based recommenders without changing their backbone. We apply the same philosophy to causal ITE estimation. To our knowledge, this is the first controlled plug-in evaluation in graph-based ITE estimation; no prior work has asked whether a single improvement transfers across all existing models.
+\textbf{Positioning.} We contribute two modular enhancements---input-level (GPE) and loss-level (variance weighting)---validated across the full spectrum of existing architectures. The plug-and-play paradigm has proven valuable in recommendation: Lighter-X~\cite{zheng2025lighterx} demonstrates decoupled modules improving graph recommenders. To our knowledge, this is the first controlled plug-in evaluation in graph-based ITE estimation.
 
 %% ====================================================================
 \section{Preliminaries}\label{sec:prelim}
@@ -122,14 +122,6 @@ If\, $\mathbb{E}[\tilde{D} \mid X] = \tau(X)$, then $\arg\min_{\hat{\tau}} \math
 \end{proposition}
 
 This justifies using imputed residuals as regression targets in the X-learner framework: estimate outcome models $\mu_t = \mathbb{E}[Y \mid T{=}t, X, X_{\mathcal{N}}]$ for $t \in \{0,1\}$, form cross-residuals $\mathrm{D}_1 = Y(1) - \mu_0$ and $\mathrm{D}_0 = \mu_1 - Y(0)$, then combine via propensity-weighted regression.
-
-\subsection{Graph Attention Networks}
-
-To model complex network interference, we adopt multi-head Graph Attention Networks (GATs)~\cite{velickovic2017graph}. Each node's representation is iteratively updated by aggregating transformed features from its neighborhood:
-\begin{equation}
-    h_v^{(l+1)} = \sigma\!\left(\sum_{u \in \mathcal{N}(v)} \alpha_{vu}^{(l)} W^{(l)} h_u^{(l)}\right),
-\end{equation}
-where $\alpha_{vu}^{(l)} = \mathrm{softmax}_u\!\left(\mathrm{LeakyReLU}(\mathbf{a}^T [W^{(l)}h_v \| W^{(l)}h_u])\right)$ are learned attention coefficients. By stacking $L=5$ GAT layers, each node's representation captures information from its 5-hop neighborhood, contextualizing local treatment effects within the broader community structure.
 
 \subsection{PEHE Decomposition and the Dual-Root Structure}\label{sec:theory}
 
@@ -404,53 +396,6 @@ The headline result is Hillstrom spend: S+Var achieves a \textbf{4$\times$ Qini 
 
 On Criteo (85\% treated, approximately balanced), variance weighting provides no Qini gain. Balanced treatment assignment reduces variance in the Bernoulli model, limiting the effective dynamic range of sample weights. Practitioners should apply variance weighting selectively: it is most valuable for continuous outcomes and datasets with unequal treatment rates.
 
-\subsection{Ablation: Component Interactions}
-
-Table~\ref{tab:ablation} presents a full ablation on DBLP at $\rho=30$.
-
-\begin{table}[t]
-\caption{Full ablation on DBLP $\rho=30$ (PEHE $\downarrow$).}
-\label{tab:ablation}
-\centering
-\footnotesize
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-Model & Vanilla & +GPE & +Var & +GPE+Var \\
-\midrule
-TARNet & 6.13 & 5.45 & 6.51 & \textbf{4.27} \\
-X-learner & 4.61 & 4.49 & \textbf{3.84} & 4.14 \\
-GDC & 4.20 & 3.79 & 4.30 & \textbf{3.57} \\
-NetDeconf & 5.03 & \textbf{4.64} & 5.04 & 4.93 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Three patterns emerge. For TARNet and GDC, the combination outperforms either module alone, confirming complementary failure modes. For X-learner, variance weighting alone achieves the best result (4.61$\to$3.84): the cross-fitting procedure already provides partial structural regularization, so GPE adds noise rather than signal. For NetDeconf, GPE alone is optimal---its Wasserstein representation balancing is disrupted by the additional variance weighting loss. These model-dependent interactions reinforce the practical recommendation from Section~\ref{sec:discuss}: select plug-in configuration empirically, guided by the base architecture's existing inductive biases and the prevailing noise regime.
-
-\subsection{GAT Depth Sensitivity}\label{sec:depth}
-
-A natural question is whether the default $L{=}5$ GAT layers is optimal. Table~\ref{tab:depth} reports PEHE for TARNet+GPE on DBLP ($\rho{=}10$) as a function of GAT depth $L$.
-
-\begin{table}[t]
-\caption{GAT depth sensitivity: TARNet+GPE on DBLP $\rho{=}10$. Mean$\pm$std over 5 seeds. PEHE ($\downarrow$).}
-\label{tab:depth}
-\centering
-\footnotesize
-\begin{tabular}{@{}lc@{}}
-\toprule
-Depth $L$ & PEHE \\
-\midrule
-1 & $2.25^{\pm0.06}$ \\
-2 & $1.77^{\pm0.08}$ \\
-3 & $\mathbf{1.75}^{\pm0.03}$ \\
-5 & $2.23^{\pm0.11}$ \\
-7 & $2.98^{\pm0.09}$ \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The relationship between depth and PEHE follows a U-shaped curve. Shallow networks ($L{=}1$) underperform because they cannot capture multi-hop treatment spillover. Performance is optimal at $L \in \{2, 3\}$, where the receptive field covers the most informative neighborhood range. Deeper networks ($L{=}5, 7$) degrade due to over-smoothing: at $L{=}7$, PEHE rises to 2.98, a 70\% increase over $L{=}3$. Our default $L{=}5$ (PEHE 2.23) trades a notable accuracy loss ($+27\%$ over $L{=}3$) for a receptive field that matches the 5-hop spillover horizon in the DGP. In deployment, the optimal depth should be tuned to the anticipated interference radius---$L \in \{2,3\}$ is likely sufficient for most real-world settings. This finding directly addresses the concern that deeper architectures are not always beneficial.
-
 \subsection{Why Does GPE Work? A Mechanism Analysis}\label{sec:mechanism}
 
 A natural question is \emph{how} GPE improves ITE estimation. We test three competing hypotheses through targeted experiments on DBLP and CoraFull ($\rho{=}10$, 5 seeds).
@@ -488,21 +433,6 @@ X-learner & CoraFull & 0.641$^{\pm.023}$ & \textbf{0.689}$^{\pm.008}$ \\
 \section{Discussion}\label{sec:discuss}
 %% ====================================================================
 
-\subsection{Network Position as a Dual Root: Why GPE and Variance Weighting Belong Together}
-
-A legitimate concern is whether GPE and variance weighting are merely two independent tricks bundled for publication convenience. Our mechanism analysis reveals a deeper connection: \emph{network position is the common root cause of both problems they address.}
-
-In networked observational data, a node's structural position simultaneously affects three quantities:
-\begin{enumerate}
-    \item \emph{Treatment assignment} (confounding path, addressed by \textbf{GPE}): nodes in certain communities or structural roles are more likely to receive treatment. GPE makes this confounding structure observable, improving propensity estimation by up to +0.138 AUC on GDC/CoraFull (Table~\ref{tab:propensity});
-    \item \emph{Potential outcomes} (heterogeneity path, addressed by \textbf{GPE}): the treatment effect itself varies by position---community members may amplify or dampen each other's responses. The BNN exception confirms this mechanism: BNN's shared S-learner head cannot condition treatment response on position separately, yielding no gain from GPE;
-    \item \emph{Outcome noise} (heteroscedasticity path, addressed by \textbf{Variance Weighting}): behavior volatility is position-dependent. Our DGP makes this explicit: $\varepsilon \sim \mathcal{N}(0, \sigma(Z))$ where $\sigma$ is derived from the dot product of the SVD-compressed features $Z$ with a random direction vector, confirming that noise variance is structurally determined. The 4$\times$ Qini improvement on continuous Hillstrom spend outcomes (Table~\ref{tab:tabular}) provides direct real-world confirmation.
-\end{enumerate}
-
-GPE addresses paths (1) and (2) by injecting positional information into the model's prediction heads; variance weighting addresses path (3) by down-weighting samples whose outcomes are inherently noisy. The two modules are complementary because they target \emph{different downstream consequences of the same root cause}, rather than attacking the same problem from two angles.
-
-This dual-root structure explains the empirical patterns at high noise: at $\rho{=}5$, confounding dominates and GPE alone suffices. At $\rho{=}30$, GPE alone \emph{increases} PEHE on CoraFull ($4.64 \to 5.14$) because it amplifies the structural signal that is now corrupted by heavy position-dependent noise. On CoraFull and DBLP, combining both modules yields the best results---GPE+Var reduces GDC's PEHE by up to 20\%---because variance weighting prevents the position-correlated noise from corrupting GPE's enhanced representations. On PubMed, where heteroscedasticity dominates, variance weighting alone achieves a 29\% reduction ($4.47 \to 3.19$). The relative contribution of each module is thus predictable from the data characteristics: confounding-heavy settings favor GPE, noise-heavy settings favor variance weighting, and the combination is optimal when both are present.
-
 \subsection{Practical Guidelines for RecSys Practitioners}
 
 The dual-root perspective translates into concrete deployment heuristics.
@@ -511,7 +441,7 @@ The dual-root perspective translates into concrete deployment heuristics.
 
 \textbf{When to use variance weighting.} The learned $\log\sigma^2$ head earns its keep on continuous outcomes with genuine noise heterogeneity (revenue, dwell time, spend). For binary outcomes, the analytical Bernoulli variance $\sigma^2 = \mu(1-\mu)$ is a lightweight substitute that primarily regularizes training stability rather than shifting mean performance; do not expect it to move Qini on balanced datasets like Criteo.
 
-\textbf{When to combine both.} The dual-root analysis predicts that combining both modules is most valuable when \emph{both} network confounding and outcome noise are substantial---precisely the high-noise, community-structured settings common in social recommendation. Under such conditions, GPE alone risks overfitting to noisy pseudo-labels (a failure mode we observe empirically), while variance weighting alone cannot correct the structural confounding bias. Only the combination addresses both failure modes. The exact configuration (GPE only, Var only, or both) should be decided by the base architecture and noise regime: Table~\ref{tab:ablation} shows that the optimal plug-in combination is model-dependent.
+\textbf{When to combine both.} The dual-root analysis predicts that combining both modules is most valuable when \emph{both} network confounding and outcome noise are substantial---precisely the high-noise, community-structured settings common in social recommendation. Under such conditions, GPE alone risks overfitting to noisy pseudo-labels (a failure mode we observe empirically), while variance weighting alone cannot correct the structural confounding bias. Only the combination addresses both failure modes. The exact configuration (GPE only, Var only, or both) should be decided by the base architecture and noise regime: Table~\ref{tab:var} shows that the optimal combination is dataset-dependent.
 
 \subsection{Design Choices and Robustness}
 
@@ -523,21 +453,12 @@ Proposition~\ref{prop:dualroot}(a) predicts that \emph{any} proxy for $Z^*$ shou
 \textbf{Why cross-attention fusion instead of concatenation?}
 Concatenation assigns each node its own positional encoding without any cross-node interaction at the fusion stage. Cross-attention (features as queries, positions as keys/values) allows every node to attend over the positional context of \emph{all other nodes}, providing a global receptive field before any GNN message-passing occurs. Our H3 ablation (Section~\ref{sec:mechanism}) reveals that concatenation slightly outperforms cross-attention in mean PEHE on DBLP ($2.10$ vs.\ $2.32$), but cross-attention achieves $4{\times}$ lower cross-seed variance---a valuable stability property for production systems where training-to-training consistency matters. At scale, concatenation's $O(n)$ complexity makes it the pragmatic default; cross-attention is recommended when the graph fits in memory and stability is prioritized. The theoretical contribution of GPE is the positional signal itself---not the fusion mechanism---so the choice between concatenation and cross-attention is an engineering decision, not a scientific one.
 
-\textbf{Why 5 GAT layers?}
-$L{=}5$ matches the 5-hop spillover horizon in our semi-synthetic DGP ($\gamma^r$ decay per hop $r$). Over-smoothing is a real concern at this depth, but two design choices mitigate it: per-layer residual connections ($h^{(l+1)} = \text{GAT}(h^{(l)}) + W_{\text{res}} h^{(l)}$) and narrow hidden dimensions (128). Our depth sensitivity analysis (Table~\ref{tab:depth}) reveals a U-shaped curve with optimal PEHE at $L \in \{2, 3\}$; $L{=}5$ trades a modest accuracy loss for a receptive field that matches the DGP's spillover horizon. In practice, the optimal depth should be tuned to the anticipated interference radius.
-
-\textbf{Variance floor $\delta$.}
-$\delta{=}0.01$ balances stability against information loss. Values below 0.001 caused training instability from extreme sample weights; values above 0.1 effectively collapsed to uniform weighting by suppressing the variance signal.
+\textbf{Depth and variance floor.} Our depth sensitivity analysis on DBLP ($\rho{=}10$, TARNet+GPE) shows a U-shaped curve: $L{=}3$ is optimal (PEHE $1.75$), while our default $L{=}5$ (PEHE $2.23$) trades accuracy for a receptive field matching the DGP's 5-hop spillover. In deployment, $L \in \{2,3\}$ is likely sufficient. The variance floor $\delta{=}0.01$ balances stability against information loss; values below 0.001 caused instability, above 0.1 collapsed to uniform weighting.
 
 \textbf{Relationship to graph transformers.}
 Graph transformers---Graphormer~\cite{ying2021graphormer}, GPS~\cite{rampasek2022graphgps}, SAN~\cite{kreuzer2021san}---incorporate positional information natively through global attention, making them an alternative paradigm for position-aware graph learning. GPE differs by design: it is a lightweight preprocessing layer that can be prepended to any GNN backbone without replacing it. To test whether GPE adds value when the backbone is already position-aware, we replaced the GAT backbone with a sparse graph transformer (scaled dot-product attention over edges with learned degree centrality encoding, following Graphormer's design; we term this variant ``Graphformer'' to distinguish it from the full Graphormer model) and evaluated TARNet on DBLP ($\rho{=}10$, 5~seeds). The Graphformer backbone alone ($1.95^{\pm.13}$) outperforms GAT ($2.43^{\pm.24}$), confirming that native positional encoding improves causal estimation. GPE substantially improves GAT ($2.43 \to 2.20$, $-9\%$), but \emph{does not} improve the Graphformer backbone ($1.95 \to 2.06$). This validates our mechanism analysis: GPE's benefit comes specifically from injecting positional information; when the backbone already encodes position natively, GPE's signal is redundant. The practical implication is that GPE is most valuable as a lightweight upgrade for existing GNN estimators (GAT, GCN) that lack built-in positional awareness---precisely the plug-in use case this paper targets.
 
-\textbf{Cross-fitting and gradient isolation.}
-The variance target $\log((\mathrm{D}_t - \hat{\tau}_t)^2 + \epsilon)$ in Algorithm~\ref{alg:cavin} uses detached gradients from $\hat{\mu}$ and $\hat{\tau}$. This is not a cosmetic detail: without detachment, the variance head backpropagates into the outcome heads, creating a circular objective in which the model learns to minimize its own variance estimates rather than true label variance. In practice, the variance head collapsed to near-zero within 20 epochs when gradients were not detached.
-
-\subsection{Computational Overhead}
-
-GPE adds approximately 8--12\% wall-clock training time per epoch (the cross-attention layer), while the variance head adds 3--5\%. The node2vec embedding is pre-computed offline in ${\sim}18$ minutes for a 20K-node graph and ${\sim}2$ minutes for a 5K-node graph. The total overhead of both modules (${\sim}15$\%) is modest relative to the 10--35\% PEHE improvement they provide, making the cost-benefit tradeoff favorable for the datasets in our evaluation.
+\textbf{Cross-fitting and overhead.} Gradient detachment in Algorithm~\ref{alg:cavin} is critical: without it, the variance head collapsed to near-zero within 20 epochs. Total wall-clock overhead is ${\sim}15\%$ (8--12\% for GPE cross-attention, 3--5\% for the variance head), with node2vec pre-computed offline (${\sim}2$~min for 5K nodes, ${\sim}18$~min for 20K).
 
 \subsection{Comparison with the Standard Benchmarks}
 
