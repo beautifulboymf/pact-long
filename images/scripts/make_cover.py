@@ -1,18 +1,17 @@
-"""Render Figure 1 (cover illustration) for the PACT paper — v3.
+"""Render Figure 1 (cover illustration) for the PACT paper — v4.
 
-Key upgrades over v2:
-  * Larger stochastic-block-model (~28 nodes per community) rendered with a
-    repulsive Kamada–Kawai layout so individual nodes and edges are visible
-    instead of a blob.
-  * Weak inter-community ties (multiple bridge edges) — looks like a real
-    social graph, not a staged two-island picture.
-  * sigma^2(Z_i) mapped to node *size* over a 4x range, plus outline width,
-    so heteroscedasticity reads at thumbnail size.
-  * Dual-root story made explicit: one horizontal baseline sits under the
-    graph with two compact panels — "bias root" (community position ->
-    T, Y(t)) and "variance root" (position -> sigma^2) — connected by a
-    single shared arrow to the latent Z*.
-  * Legend merged into the same baseline, no floating chips.
+Design: twin panels of the same graph, colour-coded by two different
+consequences of the same latent structural position Z*.
+  Left panel  : treatment propensity pi_i = sigmoid(alpha * z_i)
+                (coral -> grey -> teal diverging colourmap)
+  Right panel : outcome-noise variance sigma^2_i = monotone(|z_i|)
+                (white -> purple sequential colourmap)
+A banner above both panels names the single latent cause and cites
+Proposition 1.
+
+z_i is the Fiedler vector of the graph Laplacian — a principled
+continuous 1-D "structural position" score that drops any notion of
+discrete community. No community colouring anywhere.
 
 Run from the repository root:
     python images/scripts/make_cover.py
@@ -28,24 +27,18 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
-SEED = 11
+SEED = 23
 OUT_DIR = Path(__file__).resolve().parents[1]
 OUT_PDF = OUT_DIR / "Uplift_cover.pdf"
 OUT_PNG = OUT_DIR / "Uplift_cover_preview.png"
 
-# Palette — cool blue + warm green + orange target + teal/purple accents
-# matching the paper's pactaccent teal and a complementary variance accent.
-COMM_BLUE = "#4C72B0"
-COMM_GREEN = "#55A868"
-TARGET_ORANGE = "#E08E44"
-HALO_ORANGE = "#F2B97C"
-NOISE_EDGE = "#7E7E7E"
-EDGE_GREY = "#B0B0B0"
-TEXT_DARK = "#2B2B2B"
+# ---- palette (matches arch.tex) -----------------------------------
+BIAS_ACCENT = "#2A8A8A"     # teal = bias-pathway accent
+VAR_ACCENT = "#8A4FAD"      # purple = variance-pathway accent
+EDGE_GREY = "#B3B3B3"
+TEXT_DARK = "#222222"
 TEXT_GREY = "#555555"
-BIAS_ACCENT = "#2A8A8A"      # teal, matches pactaccent in arch.tex
-VAR_ACCENT = "#8A4FAD"       # purple, complementary role
-LATENT_GREY = "#3A3A3A"
+LATENT_GREY = "#333333"
 
 mpl.rcParams.update(
     {
@@ -59,248 +52,215 @@ mpl.rcParams.update(
 )
 
 
-def build_graph(rng: np.random.Generator):
-    n1, n2 = 28, 28
-    p_in, p_out = 0.18, 0.012
-    g = nx.stochastic_block_model(
-        [n1, n2], [[p_in, p_out], [p_out, p_in]], seed=SEED
-    )
+def make_graph(rng: np.random.Generator) -> tuple[nx.Graph, dict[int, tuple[float, float]], np.ndarray]:
+    """A mild-modularity graph that is *not* a clean two-community SBM."""
+    n = 48
+    # Build a soft latent-position graph: each node is placed along a line in
+    # [-1, 1] (our z*), edges formed with probability decaying in distance.
+    latent = np.sort(rng.uniform(-1, 1, size=n))
+    g = nx.Graph()
+    g.add_nodes_from(range(n))
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = abs(latent[i] - latent[j])
+            p = 0.85 * np.exp(-4.5 * d)
+            if rng.random() < p:
+                g.add_edge(i, j)
+    # Guarantee connectivity by adding a spanning chain if needed.
+    if not nx.is_connected(g):
+        comps = list(nx.connected_components(g))
+        for a, b in zip(comps, comps[1:]):
+            g.add_edge(next(iter(a)), next(iter(b)))
 
-    # Enforce at least 5 inter-community bridge edges.
-    inter = [(u, v) for u, v in g.edges if (u < n1) != (v < n1)]
-    while len(inter) < 5:
-        u = rng.integers(0, n1)
-        v = rng.integers(n1, n1 + n2)
-        if not g.has_edge(u, v):
-            g.add_edge(u, v)
-            inter.append((u, v))
+    # Compute the Fiedler vector (second eigenvector of the normalised
+    # Laplacian). We do this by hand with numpy to avoid a scipy.sparse
+    # version mismatch with networkx's built-in path.
+    A = nx.to_numpy_array(g, nodelist=range(n))
+    D = np.diag(A.sum(axis=1))
+    L = D - A
+    # Symmetric eigendecomposition, ascending order.
+    eigvals, eigvecs = np.linalg.eigh(L)
+    fiedler = eigvecs[:, 1]
+    # Normalise to [-1, 1] so downstream mappings are stable.
+    fiedler = fiedler / max(np.max(np.abs(fiedler)), 1e-9)
 
-    # Compute positions with a bipartite-ish initial guess so the two
-    # communities lay out on the left and right halves, then refine with
-    # Kamada–Kawai for smooth spacing.
-    init = {}
-    for v in range(n1):
-        init[v] = (-1.6 + 0.2 * rng.normal(), 0.25 * rng.normal())
-    for v in range(n1, n1 + n2):
-        init[v] = (1.6 + 0.2 * rng.normal(), 0.25 * rng.normal())
-    pos = nx.kamada_kawai_layout(g, pos=init, scale=1.9)
+    # Layout: Kamada–Kawai using the Fiedler vector as one anchoring coord
+    # so the 1-D structure is visible, with a second perpendicular coord for
+    # visual spread.
+    init = {i: (fiedler[i] * 2.0, rng.normal(0, 0.35)) for i in range(n)}
+    pos = nx.kamada_kawai_layout(g, pos=init, scale=1.8)
 
-    # Anchor communities left/right in case kamada tilted them.
-    for v in range(n1):
-        x, y = pos[v]
-        pos[v] = (-abs(x) - 0.4, y * 1.1)
-    for v in range(n1, n1 + n2):
-        x, y = pos[v]
-        pos[v] = (abs(x) + 0.4, y * 1.1)
-
-    # Heteroscedastic noise: highest near community boundaries (bridge-like
-    # nodes) and lowest deep inside a community. Use betweenness centrality
-    # as the proxy — high-betweenness nodes straddle the two camps.
-    bc = nx.betweenness_centrality(g)
-    bc_arr = np.array([bc[v] for v in g.nodes()])
-    if bc_arr.max() > 0:
-        bc_arr = bc_arr / bc_arr.max()
-    # Map to [0.15, 1.0]; add a pinch of jitter so nodes inside a community
-    # still vary.
-    noise = 0.15 + 0.85 * bc_arr
-    noise += rng.normal(0, 0.05, size=noise.shape)
-    noise = np.clip(noise, 0.10, 1.10)
-
-    # Target: the highest-betweenness node, pinned to the centre so it is
-    # visually between the two communities.
-    target = int(np.argmax(bc_arr))
-    pos[target] = (0.0, 0.1)
-    return g, pos, noise, target, n1
+    # Re-anchor so the Fiedler axis remains horizontal.
+    xs = np.array([pos[i][0] for i in range(n)])
+    ys = np.array([pos[i][1] for i in range(n)])
+    # Align x with the Fiedler vector (sign-flip if inverted).
+    if np.corrcoef(xs, fiedler)[0, 1] < 0:
+        fiedler = -fiedler
+    return g, pos, fiedler
 
 
-def draw_graph(ax, g, pos, noise, target, n1):
-    # --- 1) soft community halos ----------------------------------
-    for colour, members in [
-        (COMM_BLUE, range(n1)),
-        (COMM_GREEN, range(n1, 2 * n1)),
-    ]:
-        pts = np.array([pos[m] for m in members])
-        centre = pts.mean(axis=0)
-        span = np.linalg.norm(pts - centre, axis=1).max() + 0.3
-        halo = mpatches.Circle(
-            centre,
-            span,
-            facecolor=colour,
-            edgecolor="none",
-            alpha=0.11,
-            zorder=0,
-        )
-        ax.add_patch(halo)
-
-    # --- 2) edges --------------------------------------------------
+def _draw_graph_panel(ax, g, pos, node_values, cmap, vmin, vmax,
+                      border_colour, subtitle, latent_expr):
+    """Shared panel renderer."""
+    # Edges
     for u, v in g.edges():
-        inter_edge = (u < n1) != (v < n1)
-        is_target_edge = target in (u, v)
         ax.plot(
             [pos[u][0], pos[v][0]],
             [pos[u][1], pos[v][1]],
             color=EDGE_GREY,
-            linewidth=1.1 if is_target_edge else (0.7 if inter_edge else 0.45),
-            alpha=0.85 if is_target_edge else (0.55 if inter_edge else 0.35),
+            linewidth=0.5,
+            alpha=0.45,
             zorder=1,
             solid_capstyle="round",
         )
-
-    # --- 3) nodes --------------------------------------------------
-    #      size = 90 + 260 * noise    (≈ 4x dynamic range)
-    #      edge_width linearly scales with noise too
-    for v in g.nodes():
-        if v == target:
-            continue
-        colour = COMM_BLUE if v < n1 else COMM_GREEN
-        s = 90 + 260 * noise[v]
-        lw = 0.6 + 1.4 * noise[v]
+    # Nodes
+    cm = plt.get_cmap(cmap)
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+    for i in g.nodes():
+        x, y = pos[i]
+        colour = cm(norm(node_values[i]))
         ax.scatter(
-            pos[v][0],
-            pos[v][1],
-            s=s,
-            c=colour,
-            edgecolors=NOISE_EDGE,
-            linewidths=lw,
+            x, y,
+            s=170,
+            c=[colour],
+            edgecolors="#FFFFFF",
+            linewidths=0.9,
             zorder=3,
         )
+    # Panel border (soft)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_aspect("equal")
 
-    # --- 4) target node (orange halo + dot) ------------------------
-    tx, ty = pos[target]
-    halo = mpatches.Circle(
-        (tx, ty), 0.28, facecolor=HALO_ORANGE, edgecolor="none",
-        alpha=0.55, zorder=3.4,
+    # Titles
+    ax.set_title(subtitle, color=border_colour, fontsize=10.2,
+                 fontweight="bold", pad=10)
+    # Latent-DAG caption under the title
+    ax.text(0.5, 0.985, latent_expr, transform=ax.transAxes,
+            ha="center", va="top", fontsize=8.8,
+            color=TEXT_DARK)
+
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xlim(min(p[0] for p in pos.values()) - 0.3,
+                max(p[0] for p in pos.values()) + 0.3)
+    ax.set_ylim(min(p[1] for p in pos.values()) - 0.3,
+                max(p[1] for p in pos.values()) + 0.3)
+    return cm, norm
+
+
+def _add_colourbar(fig, ax, cmap, norm, label):
+    # Add a thin horizontal colourbar UNDER the panel.
+    bbox = ax.get_position()
+    cax = fig.add_axes([bbox.x0 + 0.05, bbox.y0 - 0.03,
+                        bbox.width - 0.1, 0.015])
+    cb = mpl.colorbar.ColorbarBase(
+        cax, cmap=plt.get_cmap(cmap), norm=norm,
+        orientation="horizontal",
     )
-    ax.add_patch(halo)
-    ax.scatter(
-        tx, ty,
-        s=320,
-        c=TARGET_ORANGE,
-        edgecolors="white",
-        linewidths=1.6,
-        zorder=4,
+    cb.outline.set_linewidth(0.3)
+    cb.ax.tick_params(labelsize=7, length=2, pad=1.5, colors=TEXT_GREY)
+    cb.set_label(label, fontsize=7.5, color=TEXT_GREY, labelpad=2)
+
+
+def draw_top_banner(fig):
+    """Clean banner above the two panels naming the shared latent cause."""
+    ax = fig.add_axes([0.04, 0.865, 0.92, 0.13])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+
+    # Central Z* pill — made wider and taller so the math does not overflow.
+    pill_x, pill_y = 0.30, 0.26
+    pill_w, pill_h = 0.40, 0.56
+    pill = mpatches.FancyBboxPatch(
+        (pill_x, pill_y), pill_w, pill_h,
+        boxstyle="round,pad=0.015,rounding_size=0.05",
+        linewidth=1.1, edgecolor=LATENT_GREY, facecolor="#F7F5F2",
+        zorder=3,
     )
-    ax.annotate(
-        "target user\n(estimate ITE)",
-        xy=(tx, ty + 0.16),
-        xytext=(tx, ty + 1.05),
-        fontsize=9.0,
-        color=TARGET_ORANGE,
-        ha="center",
-        fontweight="bold",
-        arrowprops=dict(arrowstyle="-|>", color=TARGET_ORANGE, lw=1.0, shrinkA=0, shrinkB=6),
-    )
+    ax.add_patch(pill)
+    ax.text(pill_x + pill_w / 2, pill_y + 0.42,
+            r"latent position $Z^*$",
+            ha="center", va="center",
+            fontsize=10.0, color=LATENT_GREY, fontweight="bold")
+    ax.text(pill_x + pill_w / 2, pill_y + 0.16,
+            r"$\Rightarrow\;\mathrm{PEHE}^2 = \mathrm{bias}^2 + \mathrm{variance}$"
+            "   (Prop. 1)",
+            ha="center", va="center", fontsize=8.8, color=TEXT_DARK)
 
-
-def draw_dual_root_baseline(ax):
-    """The explanatory baseline below the graph: Z* feeding two error roots."""
-    # Coordinates on the axes (same axes as the graph to keep everything in
-    # one canvas).
-    y = -2.05
-    # Latent node
-    z_xy = (0.0, y)
-    latent = mpatches.Circle(z_xy, 0.22, facecolor="white",
-                              edgecolor=LATENT_GREY, linewidth=1.0, zorder=5)
-    ax.add_patch(latent)
-    ax.text(0.0, y, r"$Z^*$", ha="center", va="center",
-            fontsize=10, color=LATENT_GREY, zorder=6)
-    ax.text(0.0, y - 0.38, "network\nposition",
-            ha="center", va="top", fontsize=7.5,
-            color=TEXT_GREY, style="italic")
-
-    # Left chip — bias root
-    left_cx = -2.55
-    chip_w, chip_h = 2.4, 0.9
-    left_rect = mpatches.FancyBboxPatch(
-        (left_cx - chip_w / 2, y - chip_h / 2), chip_w, chip_h,
-        boxstyle="round,pad=0.02,rounding_size=0.08",
-        linewidth=0.9, edgecolor=BIAS_ACCENT, facecolor=BIAS_ACCENT, alpha=0.12,
-        zorder=4,
-    )
-    ax.add_patch(left_rect)
-    ax.text(left_cx, y + 0.23, "bias root", fontsize=9.2,
-            ha="center", fontweight="bold", color=BIAS_ACCENT)
-    ax.text(left_cx, y + 0.02,
-            r"$Z^* \to T,\;\; Z^* \to Y(t)$",
-            fontsize=8.4, ha="center", color=TEXT_DARK)
-    ax.text(left_cx, y - 0.22,
-            "community position shifts treatment",
-            fontsize=7.4, ha="center", color=TEXT_GREY, style="italic")
-
-    # Right chip — variance root
-    right_cx = 2.55
-    right_rect = mpatches.FancyBboxPatch(
-        (right_cx - chip_w / 2, y - chip_h / 2), chip_w, chip_h,
-        boxstyle="round,pad=0.02,rounding_size=0.08",
-        linewidth=0.9, edgecolor=VAR_ACCENT, facecolor=VAR_ACCENT, alpha=0.10,
-        zorder=4,
-    )
-    ax.add_patch(right_rect)
-    ax.text(right_cx, y + 0.23, "variance root", fontsize=9.2,
-            ha="center", fontweight="bold", color=VAR_ACCENT)
-    ax.text(right_cx, y + 0.02, r"$Z^* \to \sigma^2(Y)$",
-            fontsize=8.4, ha="center", color=TEXT_DARK)
-    ax.text(right_cx, y - 0.22, "position shifts outcome noise",
-            fontsize=7.4, ha="center", color=TEXT_GREY, style="italic")
-
-    # Arrows from Z* to each chip
-    ax.annotate("", xy=(left_cx + chip_w / 2, y), xytext=(z_xy[0] - 0.22, y),
-                arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT, lw=1.2,
-                                shrinkA=0, shrinkB=2))
-    ax.annotate("", xy=(right_cx - chip_w / 2, y), xytext=(z_xy[0] + 0.22, y),
-                arrowprops=dict(arrowstyle="-|>", color=VAR_ACCENT, lw=1.2,
-                                shrinkA=0, shrinkB=2))
-
-    # Arrows from the graph (top of canvas) to Z*, rendering the idea that
-    # the *visual* phenomena above are instances of the two roots below.
-    ax.annotate("", xy=(-0.15, y + 0.4), xytext=(-1.7, -1.2),
+    # Left arrow with bias label
+    ax.annotate("", xy=(0.09, pill_y + pill_h / 2),
+                xytext=(pill_x - 0.005, pill_y + pill_h / 2),
                 arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT,
-                                lw=0.8, linestyle="dashed",
-                                shrinkA=0, shrinkB=4, alpha=0.75))
-    ax.annotate("", xy=(0.15, y + 0.4), xytext=(1.7, -1.2),
+                                lw=1.2, shrinkA=2, shrinkB=2))
+    ax.text(0.2, pill_y + pill_h / 2 + 0.22,
+            "bias channel", ha="center", va="bottom",
+            fontsize=8.8, color=BIAS_ACCENT, fontweight="bold")
+
+    # Right arrow with variance label
+    ax.annotate("", xy=(0.91, pill_y + pill_h / 2),
+                xytext=(pill_x + pill_w + 0.005, pill_y + pill_h / 2),
                 arrowprops=dict(arrowstyle="-|>", color=VAR_ACCENT,
-                                lw=0.8, linestyle="dashed",
-                                shrinkA=0, shrinkB=4, alpha=0.75))
+                                lw=1.2, shrinkA=2, shrinkB=2))
+    ax.text(0.8, pill_y + pill_h / 2 + 0.22,
+            "variance channel", ha="center", va="bottom",
+            fontsize=8.8, color=VAR_ACCENT, fontweight="bold")
 
-
-def draw_legend(ax, y):
-    chip_specs = [
-        (COMM_BLUE, "community 1", None),
-        (COMM_GREEN, "community 2", None),
-        (TARGET_ORANGE, "target", None),
-        (None, r"node size $\propto \sigma^2(Z_i)$", "sigma"),
-    ]
-    chip_x = -3.2
-    for colour, label, marker in chip_specs:
-        if marker == "sigma":
-            # draw two nested circles to show the size gradient
-            ax.scatter(chip_x - 0.12, y, s=80, c="#CFCFCF",
-                       edgecolors=NOISE_EDGE, linewidths=0.8, zorder=5)
-            ax.scatter(chip_x + 0.15, y, s=240, c="#CFCFCF",
-                       edgecolors=NOISE_EDGE, linewidths=1.4, zorder=5)
-            ax.text(chip_x + 0.42, y, label, fontsize=8.0, va="center",
-                    color=TEXT_GREY)
-        else:
-            ax.scatter(chip_x, y, s=120, c=colour, edgecolors="white",
-                       linewidths=1.0, zorder=5)
-            ax.text(chip_x + 0.2, y, label, fontsize=8.0, va="center",
-                    color=TEXT_GREY)
-        chip_x += 2.15
+    # Subtitle strap
+    ax.text(0.5, 0.05,
+            "same graph, two colourings; both track the same latent position",
+            ha="center", va="center", fontsize=8.2, color=TEXT_GREY,
+            style="italic")
 
 
 def main() -> None:
     rng = np.random.default_rng(SEED)
-    g, pos, noise, target, n1 = build_graph(rng)
+    g, pos, z = make_graph(rng)
 
-    fig, ax = plt.subplots(figsize=(7.2, 4.8))
-    draw_graph(ax, g, pos, noise, target, n1)
-    draw_dual_root_baseline(ax)
-    draw_legend(ax, y=-3.2)
+    # ---- derive the two channels from z ----
+    # Treatment propensity: diverging, centred at 0.5.
+    pi = 1.0 / (1.0 + np.exp(-2.8 * z))
+    # Outcome-noise variance: U-shaped in z (position-magnitude drives noise),
+    # normalised so the lowest-variance node is near 0 and the highest near 1.
+    sigma2 = 0.15 + 0.85 * np.abs(z)
+    sigma2 = (sigma2 - sigma2.min()) / (sigma2.max() - sigma2.min())
 
-    ax.set_aspect("equal")
-    ax.set_xlim(-4.2, 4.2)
-    ax.set_ylim(-3.6, 2.4)
-    ax.axis("off")
+    # Build the colour maps.
+    # Diverging coral↔teal for propensity (untreated=coral, treated=teal).
+    prop_cmap = mpl.colors.LinearSegmentedColormap.from_list(
+        "prop_div", ["#E07A5F", "#EAE4D2", BIAS_ACCENT], N=256
+    )
+    # White -> purple sequential for variance.
+    var_cmap = mpl.colors.LinearSegmentedColormap.from_list(
+        "var_seq", ["#F2EEF5", "#C7A8D9", VAR_ACCENT, "#4A2566"], N=256
+    )
+
+    # ---- figure layout: banner (top) + two panels (bottom) ----
+    fig = plt.figure(figsize=(7.6, 4.8))
+    ax_left = fig.add_axes([0.055, 0.12, 0.42, 0.68])
+    ax_right = fig.add_axes([0.535, 0.12, 0.42, 0.68])
+
+    cm_l, norm_l = _draw_graph_panel(
+        ax_left, g, pos, pi, prop_cmap, 0.0, 1.0,
+        BIAS_ACCENT,
+        "treatment propensity — bias source",
+        r"$Z^* \rightarrow T,\; Z^* \rightarrow Y(t)$",
+    )
+    cm_r, norm_r = _draw_graph_panel(
+        ax_right, g, pos, sigma2, var_cmap, 0.0, 1.0,
+        VAR_ACCENT,
+        "outcome-noise variance — variance source",
+        r"$Z^* \rightarrow \sigma^2(Y)$",
+    )
+
+    # Thin colourbars under each panel.
+    _add_colourbar(fig, ax_left, prop_cmap, norm_l,
+                   r"$\pi_i = \Pr(T_i = 1 \mid Z^*_i)$")
+    _add_colourbar(fig, ax_right, var_cmap, norm_r,
+                   r"$\sigma^2_i = \mathrm{Var}(Y_i \mid Z^*_i)$")
+
+    draw_top_banner(fig)
 
     fig.savefig(OUT_PDF, format="pdf")
     fig.savefig(OUT_PNG, format="png", dpi=220)

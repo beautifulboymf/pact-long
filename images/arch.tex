@@ -1,179 +1,159 @@
-% Figure 2 — three-panel architecture overview for the PACT paper (v3).
+% Figure 2 — PACT framework: theory strip (top) + training pipeline (bottom).
 % Render via \input{images/arch.tex} inside a figure* environment.
 % Requires (in main.tex preamble):
 %   \usepackage{tikz}
 %   \usetikzlibrary{arrows.meta, fit, positioning, calc, backgrounds}
-%   \definecolor{pactaccent}{HTML}{2A8A8A}
-%   \definecolor{varaccent}{HTML}{8A4FAD}
+%   \definecolor{pactaccent}{HTML}{2A8A8A}    % teal  - bias-channel
+%   \definecolor{varaccent}{HTML}{8A4FAD}     % purple - variance-channel
 \begin{tikzpicture}[
     every node/.style={font=\small},
-    block/.style={
+    %% generic blocks
+    blk/.style={
         draw, rounded corners=2pt, align=center,
-        minimum width=2.4cm, minimum height=0.8cm,
-        inner sep=3pt, line width=0.55pt,
+        minimum width=1.9cm, minimum height=0.75cm,
+        inner sep=3pt, line width=0.55pt, draw=black!55, fill=black!2,
     },
-    biasblock/.style={
-        block, draw=pactaccent!85, fill=pactaccent!10,
-        line width=0.8pt,
+    biasblk/.style={
+        blk, draw=pactaccent!85, fill=pactaccent!12, line width=0.85pt,
     },
-    varblock/.style={
-        block, draw=varaccent!85, fill=varaccent!10,
-        line width=0.8pt,
+    varblk/.style={
+        blk, draw=varaccent!85,  fill=varaccent!10,  line width=0.85pt,
     },
-    neutral/.style={block, draw=black!55, fill=black!3},
     latent/.style={
-        draw, circle, align=center,
-        minimum size=0.95cm, line width=0.8pt,
-        inner sep=1pt, fill=black!4,
+        draw, circle, fill=black!4, align=center,
+        minimum size=0.85cm, line width=0.8pt, inner sep=0pt,
     },
+    %% arrows
     pipe/.style={-Stealth, line width=0.55pt, draw=black!70},
     biaspipe/.style={-Stealth, line width=0.75pt, draw=pactaccent},
     varpipe/.style={-Stealth, line width=0.75pt, draw=varaccent},
-    detach/.style={-Stealth, dashed, line width=0.7pt, draw=red!70!black},
-    crosslink/.style={-Stealth, dash pattern=on 3pt off 2pt,
-        line width=0.8pt, draw=pactaccent!85},
-    crosslinkvar/.style={-Stealth, dash pattern=on 3pt off 2pt,
-        line width=0.8pt, draw=varaccent!90},
-    panel/.style={
-        draw=black!15, rounded corners=4pt, line width=0.5pt,
-        inner sep=8pt,
+    detach/.style={-Stealth, dashed, line width=0.7pt, draw=red!65!black},
+    reduce/.style={-Stealth, dash pattern=on 3pt off 2pt,
+        line width=0.9pt},
+    %% labels
+    rhead/.style={font=\small\bfseries, text=black!78},
+    plugin/.style={
+        font=\scriptsize\bfseries, inner sep=2pt, outer sep=0pt,
+        rounded corners=2pt,
     },
-    header/.style={font=\small\bfseries, text=black!78},
     sublabel/.style={font=\scriptsize\itshape, text=black!55, align=center},
-    goal/.style={font=\scriptsize\bfseries, align=center},
+    stripbg/.style={fill=black!3, draw=black!15, line width=0.35pt,
+                    rounded corners=3pt, inner sep=6pt},
 ]
 
-% ======================================================================
-% Panel 1 — Problem: dual-root confounder
-% ======================================================================
-\begin{scope}[local bounding box=panel1]
-    \node[header] (h1) at (0, 2.55) {Problem: dual-root confounder};
+% ===================================================================
+%   TOP STRIP — dual-root theory (Z* -> T, Y, sigma^2 -> PEHE^2)
+% ===================================================================
+\begin{scope}[local bounding box=theory]
+    \node[rhead] (thdr) at (-7.2, 1.55) {\small Theory (Prop. 1):};
 
-    % Latent Z*
-    \node[latent] (Z) at (0, 1.7) {$Z^*$};
+    % Latent Z* on the left of the strip.
+    \node[latent] (Z) at (-5.3, 1.0) {$Z^*$};
 
-    % Three children — colour-coded by which error term they feed.
-    \node[biasblock, minimum width=1.3cm] (T) at (-1.45, 0.55) {$T$};
-    \node[biasblock, minimum width=1.3cm] (Y) at (0,     0.55) {$Y(t)$};
-    \node[varblock,  minimum width=1.5cm] (S) at ( 1.55, 0.55) {$\sigma^2(Y)$};
+    % Three children.
+    \node[biasblk, minimum width=1.2cm] (T) at (-3.3, 1.55) {\small$T$};
+    \node[biasblk, minimum width=1.2cm] (Yt) at (-3.3, 0.55) {\small$Y(t)$};
+    \node[varblk,  minimum width=1.4cm] (Sg) at (-3.3, -0.45) {\small$\sigma^2(Y)$};
+
     \draw[biaspipe] (Z) -- (T);
-    \draw[biaspipe] (Z) -- (Y);
-    \draw[varpipe]  (Z) -- (S);
+    \draw[biaspipe] (Z) -- (Yt);
+    \draw[varpipe]  (Z) -- (Sg);
 
-    % PEHE decomposition box.
-    \node[neutral, minimum width=4.2cm, minimum height=1.0cm,
-          align=center] (dec) at (0, -1.1)
-        {$\mathrm{PEHE}^2 \;=\; \underbrace{\text{bias}^2}_{\textcolor{pactaccent}{\text{(a)}}}
-        \;+\; \underbrace{\text{variance}}_{\textcolor{varaccent}{\text{(b)}}}$};
+    % Error-term aggregation.
+    \node[biasblk, minimum width=1.6cm] (bias) at (-0.5, 1.05)
+        {\small bias$^2$};
+    \node[varblk,  minimum width=1.6cm] (var) at (-0.5, -0.45)
+        {\small variance};
 
-    % Bias and variance feeders.
-    \draw[biaspipe] (T.south) to[bend right=12]
-        node[sloped, font=\scriptsize, above, pos=.5, yshift=-1pt]{bias}
-        (dec.north west);
-    \draw[biaspipe] (Y.south) -- (dec.north);
-    \draw[varpipe]  (S.south) to[bend left=12]
-        node[sloped, font=\scriptsize, above, pos=.5, yshift=-1pt]{variance}
-        (dec.north east);
+    \draw[biaspipe] (T.east)  -- (bias.west);
+    \draw[biaspipe] (Yt.east) -- (bias.west);
+    \draw[varpipe]  (Sg.east) -- (var.west);
 
-    \node[sublabel, below=0.15cm of dec, text width=4.8cm]
-        {one latent cause feeds both terms (Prop.~\ref{prop:dualroot})};
+    % PEHE total.
+    \node[blk, minimum width=2.2cm, minimum height=1.1cm,
+          align=center] (pehe) at (1.85, 0.3)
+        {\small$\mathrm{PEHE}^2$};
+    \draw[biaspipe] (bias.east) -- (pehe.west);
+    \draw[varpipe]  (var.east)  -- (pehe.west);
+
+    % "attack target" callouts that the bottom pipeline will point to.
+    \coordinate (bias_anchor) at ($(bias.south) + (0, -0.04)$);
+    \coordinate (var_anchor)  at ($(var.north)  + (0,  0.04)$);
 \end{scope}
-\node[panel, fit=(panel1)] (box1) {};
+\begin{pgfonlayer}{background}
+    \node[stripbg, fit=(theory), inner sep=10pt] (theorybg) {};
+\end{pgfonlayer}
 
-% ======================================================================
-% Panel 2 — GPE: bias correction
-% ======================================================================
-\begin{scope}[xshift=6.4cm, local bounding box=panel2]
-    \node[header, text=pactaccent!85] (h2) at (0, 2.55)
-        {GPE: bias correction};
+% ===================================================================
+%   BOTTOM PIPELINE — training flow with two plug-ins
+% ===================================================================
+\begin{scope}[local bounding box=pipeline, yshift=-3.6cm]
+    \node[rhead] (phdr) at (-7.2, 0.85) {\small PACT training pipeline:};
 
-    \node[goal, text=pactaccent, align=center] at (0, 2.05)
-        {attacks $\text{bias}^2$ via Prop.~\ref{prop:dualroot}(a)};
+    % 1) Input
+    \node[blk, minimum width=1.5cm, minimum height=0.95cm]
+        (input) at (-5.5, 0) {$X,\,\mathcal{G}$};
 
-    % Inputs
-    \node[neutral, minimum width=1.7cm] (X) at (-1.55, 1.1) {$X$};
-    \node[biasblock, dashed, align=center, minimum width=1.95cm]
-        (nv) at ( 1.25, 1.1) {$p(Z^*)$ \\[-1pt]{\scriptsize node2vec (offline)}};
+    % 2) GPE (bias-channel plug-in)
+    \node[biasblk, minimum width=1.9cm, minimum height=0.95cm]
+        (gpe) at (-3.3, 0)
+        {\textbf{GPE}\\{\scriptsize$X \oplus p(Z^*)$}\\{\scriptsize node2vec $+$ cross-attn}};
+    \node[plugin, above=0.05cm of gpe, text=pactaccent,
+          fill=pactaccent!14, draw=pactaccent]
+        {PACT plug-in};
+    \draw[biaspipe] (input) -- (gpe);
 
-    % Core plug-in
-    \node[biasblock, minimum width=3.2cm] (ca) at (0, 0.05) {cross-attention};
+    % 3) Base model M
+    \node[blk, minimum width=2.3cm, minimum height=0.95cm]
+        (M) at (-0.7, 0) {base model $M$};
+    \node[sublabel, below=0.05cm of M, text width=3.6cm]
+        {BNN, TARNet, NetDeconf, GIAL, GNUM, GDC, X-learner};
+    \draw[pipe] (gpe) -- (M);
 
-    % Backbone
-    \node[neutral, minimum width=3.2cm] (M) at (0, -1.05) {base model $M$};
+    % 4) Outcome heads
+    \node[blk, minimum width=1.6cm, minimum height=0.95cm]
+        (mu) at (1.75, 0) {$\hat\mu_0,\hat\mu_1$};
+    \draw[pipe] (M) -- (mu);
 
-    % Output heads
-    \node[neutral, minimum width=3.2cm] (mu)  at (0, -1.95) {$\hat\mu_0,\; \hat\mu_1$};
-
-    % List of compatible backbones
-    \node[sublabel, below=0.03cm of mu, text width=4.3cm]
-        {plug-in to any backbone: BNN, TARNet, NetDeconf, GIAL, GNUM, GDC, X-learner};
-
-    % Wiring
-    \draw[pipe]     (X.south)  -- ++(0, -0.35) -| (ca.north west);
-    \draw[biaspipe] (nv.south) -- ++(0, -0.35) -| (ca.north east);
-    \draw[biaspipe] (ca) -- (M);
-    \draw[pipe]     (M)  -- (mu);
-\end{scope}
-\node[panel, fit=(panel2)] (box2) {};
-
-% ======================================================================
-% Panel 3 — Variance-Weighted Learning: variance correction
-% ======================================================================
-\begin{scope}[xshift=12.8cm, local bounding box=panel3]
-    \node[header, text=varaccent!85] (h3) at (0, 2.55)
-        {Variance-Weighted Learning: variance correction};
-
-    \node[goal, text=varaccent, align=center] at (0, 2.05)
-        {attacks $\text{variance}$ via Prop.~\ref{prop:dualroot}(b)};
-
-    % Top row — inputs from Panel 2's output feed in from the left.
-    \node[neutral, minimum width=2.6cm] (mu)     at (-1.35, 1.1) {$\hat\mu_t$};
-    \node[neutral, minimum width=2.6cm] (pseudo) at ( 1.35, 1.1)
-        {$D = Y - \hat\mu_{1-t}$};
+    % 5) Pseudo-outcome
+    \node[blk, minimum width=2.0cm, minimum height=0.95cm]
+        (pseudo) at (4.15, 0) {$D = Y - \hat\mu_{1-t}$};
     \draw[pipe] (mu) -- (pseudo);
 
-    % Middle row — the two accent blocks stacked vertically.
-    \node[varblock, minimum width=2.6cm, minimum height=0.9cm]
-        (sh)  at (-1.35, -0.35) {$\log\hat\sigma^2_t$ head};
-    \node[varblock, minimum width=3.3cm, minimum height=0.9cm]
-        (reg) at ( 1.7, -0.35)
-        {$\sum_i w_i\,(D_i - \hat\tau(X_i))^2$};
+    % 6) Variance-Weighted Loss (variance-channel plug-in)
+    \node[varblk, minimum width=2.6cm, minimum height=0.95cm]
+        (loss) at (7.0, 0)
+        {\textbf{Variance-Weighted Loss}\\{\scriptsize$\sum_i w_i (D_i - \hat\tau)^2,\; w_i=\tfrac{1}{\max\{\hat\sigma^2_t, \delta\}}$}};
+    \node[plugin, above=0.05cm of loss, text=varaccent,
+          fill=varaccent!12, draw=varaccent]
+        {PACT plug-in};
+    \draw[pipe] (pseudo) -- (loss);
 
-    % Pseudo-outcome feeds regression, head feeds regression.
-    \draw[pipe]    (pseudo.south) -- ++(0, -0.3) -| (reg.north);
-    \draw[varpipe] (sh.east) -- (reg.west);
-
-    % Weight label just above the head→regression arrow.
-    \node[font=\scriptsize, text=varaccent] at (0.25, -0.15)
-        {$w_i = 1/\max\{\hat\sigma^2_t(X_i), \delta\}$};
-
-    % Bottom — pilot τ̂ detached, with curved gradient-blocked arrow to head.
-    \node[neutral, dashed, minimum width=3.0cm, minimum height=0.7cm]
-        (tau) at (-0.1, -1.7)
-        {{\scriptsize pilot $\hat\tau$ \,(gradient detached)}};
-    \draw[detach] (tau.west) to[out=180, in=-90] (sh.south);
+    % Variance head + detached pilot, drawn below the loss block
+    \node[varblk, minimum width=1.8cm, minimum height=0.55cm]
+        (sh) at (7.0, -1.25) {{\scriptsize$\log\hat\sigma^2_t$ head}};
+    \node[blk, minimum width=2.2cm, minimum height=0.55cm,
+          draw=black!40, dashed]
+        (pilot) at (4.15, -1.25) {{\scriptsize pilot $\hat\tau$ (detached)}};
+    \draw[varpipe]  (sh) -- (loss);
+    \draw[detach]   (pilot) -- (sh);
 \end{scope}
-\node[panel, fit=(panel3)] (box3) {};
 
-% ======================================================================
-% Cross-panel arrows — the two corrections attack the left-panel terms.
-% ======================================================================
-% Middle panel's backbone output reduces bias -> feeds the bias arrow in Panel 1.
-\draw[crosslink]
-    ([yshift=0.05cm]box2.west) to[out=180, in=-45]
-    node[font=\scriptsize, text=pactaccent!85, sloped, above, pos=.55]
-        {reduces} ($(box1.east)+(-0.1,0.05)$);
+% ===================================================================
+%   CROSS-LAYER "reduces" ARROWS  (bottom plug-ins -> top error terms)
+% ===================================================================
+% From GPE up to bias^2 box on the theory strip.
+\draw[reduce, draw=pactaccent!85]
+    (gpe.north) to[out=90, in=-90]
+    node[font=\scriptsize\bfseries, text=pactaccent, sloped, above, pos=.55]
+        {reduces bias$^2$ (a)}
+    (bias_anchor);
 
-% Right panel's regression output reduces variance -> feeds the variance arrow in Panel 1.
-\draw[crosslinkvar]
-    ([yshift=-0.15cm]box3.west) to[out=180, in=-70]
-    node[font=\scriptsize, text=varaccent!90, sloped, above, pos=.45]
-        {reduces} ($(box1.east)+(-0.1,-0.25)$);
-
-% Glue tagline.
-\node[font=\scriptsize\itshape, text=black!55, align=center]
-    at (6.4, -3.55) {
-        One unified problem, two orthogonal corrections. Both plug-ins attach to any base model $M$ without modifying its internals.
-    };
+% From Variance-Weighted Loss up to variance box.
+\draw[reduce, draw=varaccent!85]
+    (loss.north) to[out=90, in=-90]
+    node[font=\scriptsize\bfseries, text=varaccent, sloped, above, pos=.55]
+        {reduces variance (b)}
+    (var_anchor);
 
 \end{tikzpicture}
