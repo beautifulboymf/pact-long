@@ -11,6 +11,9 @@
 \usepackage[capitalize,noabbrev]{cleveref}
 \usepackage{xcolor}
 \usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, fit, positioning}
+\definecolor{pactaccent}{HTML}{2A8A8A}
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
@@ -64,7 +67,7 @@ Graph-based uplift modeling powers targeted recommendation on social networks, w
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.95\linewidth]{images/Uplift_cover.png}
+    \includegraphics[width=0.95\linewidth]{images/Uplift_cover.pdf}
     \caption{Mutual influence among users in a social network. Users in community~1 (blue) and community~2 (green) exhibit different treatment response patterns. The orange user is the estimation target. Grey shading indicates higher outcome noise (heteroscedasticity).}
     \label{fig:cover}
 \end{figure}
@@ -193,8 +196,8 @@ Proposition~\ref{prop:dualroot}(c) predicts that at high noise ($\rho \geq 30$),
 
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=0.92\linewidth]{images/Uplift.png}
-    \caption{Overview. The left two panels depict representative existing learners that ignore graph structure or heteroscedastic noise (S/T-Learner; the X-Learner is shown with its standard static propensity weights). The right panel shows the two plug-in modules contributed in this paper---GPE (input level, bias correction) and variance-weighted loss (loss level, variance correction)---which attach to any graph ITE backbone without modifying its internal architecture. For illustration we overlay the plug-ins on an X-learner base; the same attachment applies to BNN, TARNet, NetDeconf, GIAL, GNUM, and GDC, as evaluated in Table~\ref{tab:main}.}
+    \input{images/arch.tex}
+    \caption{Overview. \textbf{Left:} network position $Z^*$ acts as a dual-root confounder---it biases treatment assignment ($Z^* \to T$, $Z^* \to Y(t)$) and drives heteroscedastic outcome noise ($Z^* \to \sigma^2(Y)$), so the PEHE of any graph ITE estimator decomposes into a bias term and a variance term sharing this latent cause (Proposition~\ref{prop:dualroot}). \textbf{Middle:} GPE attacks the bias term by fusing a node2vec proxy for $Z^*$ into the base model's input via cross-attention. \textbf{Right:} Variance-Weighted Learning attacks the variance term by reweighting the pseudo-outcome regression with inverse estimates from a $\log\sigma^2$ head trained under gradient-detached cross-fitting (dashed red arrow). Both corrections attach to any base model $M$ (BNN, TARNet, NetDeconf, GIAL, GNUM, GDC, X-learner; Table~\ref{tab:main}) without modifying its internal architecture.}
     \label{fig:arch}
 \end{figure*}
 

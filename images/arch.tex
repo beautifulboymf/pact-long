@@ -1,0 +1,96 @@
+% Figure 2 — three-panel architecture overview for the PACT paper.
+% Render via \input{images/arch.tex} inside a figure* environment.
+% Requires (in main.tex preamble): \usepackage{tikz}; \usetikzlibrary{arrows.meta, fit, positioning}; \definecolor{pactaccent}{HTML}{2A8A8A}
+\begin{tikzpicture}[
+    every node/.style={font=\small},
+    block/.style={
+        draw, rounded corners=2pt, align=center,
+        minimum width=2.1cm, minimum height=0.8cm,
+        inner sep=3pt, line width=0.6pt,
+    },
+    accent/.style={
+        block, draw=pactaccent, fill=pactaccent!12,
+        line width=0.8pt,
+    },
+    neutral/.style={block, draw=black!60, fill=black!3},
+    latent/.style={
+        draw, circle, align=center,
+        minimum size=0.9cm, line width=0.7pt,
+        inner sep=1pt, fill=black!4,
+    },
+    pipe/.style={-Stealth, line width=0.6pt, draw=black!70},
+    detach/.style={-Stealth, dashed, line width=0.6pt, draw=red!70!black},
+    crosslink/.style={-Stealth, dashed, line width=0.5pt, draw=pactaccent!80},
+    panel/.style={
+        draw=black!15, rounded corners=3pt,
+        line width=0.4pt, inner sep=7pt,
+    },
+    header/.style={font=\small\bfseries, text=black!75},
+    sublabel/.style={font=\scriptsize\itshape, text=black!55, align=center},
+]
+
+% ---------- Panel 1: Problem (dual-root confounder) ----------
+\begin{scope}[local bounding box=panel1]
+    \node[header] (h1) at (0, 2.35) {Problem: dual-root confounder};
+    \node[latent] (Z) at (0, 1.55) {$Z^*$};
+    \node[neutral] (T) at (-1.6, 0.1) {\small $T$};
+    \node[neutral] (Y) at (0,    0.1) {\small $Y(t)$};
+    \node[neutral] (S) at ( 1.6, 0.1) {\small $\sigma^2(Y)$};
+    \draw[pipe] (Z) -- (T);
+    \draw[pipe] (Z) -- (Y);
+    \draw[pipe] (Z) -- (S);
+    \node[neutral, minimum width=3.6cm] (dec) at (0, -1.15) {
+        $\mathrm{PEHE}^2 = \text{bias}^2 + \text{variance}$
+    };
+    \draw[pipe, draw=pactaccent] (T.south) to[bend right=12] node[sloped, font=\scriptsize, above]{bias} (dec.north west);
+    \draw[pipe, draw=pactaccent] (Y.south) -- (dec.north);
+    \draw[pipe, draw=pactaccent] (S.south) to[bend left=12] node[sloped, font=\scriptsize, above]{variance} (dec.north east);
+\end{scope}
+\node[panel, fit=(panel1)] {};
+
+% ---------- Panel 2: GPE (bias correction) ----------
+\begin{scope}[xshift=6.0cm, local bounding box=panel2]
+    \node[header] (h2) at (0, 2.35) {GPE: bias correction};
+    \node[neutral] (X)    at (-1.55, 1.35) {$X$};
+    \node[accent, dashed, align=center] (nv) at ( 1.55, 1.35) {$p(Z^*)$\\[-1pt]{\scriptsize node2vec (offline)}};
+    \node[accent] (ca)    at (0, 0.2)   {cross-attention};
+    \node[neutral, minimum width=3.8cm] (M) at (0, -1.0) {base model $M$};
+    \node[sublabel, below=0.05cm of M] {BNN, TARNet, NetDeconf, GIAL, GNUM, GDC, X-learner};
+
+    \draw[pipe] (X) -- (ca);
+    \draw[pipe] (nv) -- (ca);
+    \draw[pipe] (ca) -- (M);
+
+    \node[font=\scriptsize, text=pactaccent, align=center]
+      at (0, 1.85) {reduces bias via Prop.~\ref{prop:dualroot}(a)};
+\end{scope}
+\node[panel, fit=(panel2)] {};
+
+% ---------- Panel 3: Variance-Weighted Learning (variance correction) ----------
+\begin{scope}[xshift=12.0cm, local bounding box=panel3]
+    \node[header] (h3) at (0, 2.35) {Variance-Weighted Learning: variance correction};
+    \node[neutral] (mu)   at (-1.55, 1.35) {$\hat\mu_t$};
+    \node[neutral] (pseudo) at (1.55, 1.35) {$D = Y - \hat\mu_{1-t}$};
+    \node[accent]  (sh)   at (-1.55, -0.1) {$\log\hat\sigma^2_t$ head};
+    \node[accent, minimum width=3.8cm]  (reg)  at (1.2, -0.1) {$\sum_i w_i (D_i - \hat\tau(X_i))^2$\\[-1pt]{\scriptsize $w_i = 1/\max\{\hat\sigma^2_t(X_i), \delta\}$}};
+
+    \draw[pipe] (mu) -- (pseudo);
+    \draw[pipe] (pseudo) -- (reg);
+    \draw[pipe] (sh.east) -- (reg.west);
+
+    \node[font=\scriptsize, below=0.05cm of reg, align=center] (tauhat) {pilot $\hat\tau$ (detached)};
+    \draw[detach] (tauhat.west) to[bend right=15] (sh.south);
+
+    \node[font=\scriptsize, text=pactaccent, align=center]
+      at (0, 1.85) {reduces variance via Prop.~\ref{prop:dualroot}(b)};
+\end{scope}
+\node[panel, fit=(panel3)] {};
+
+% ---------- Cross-panel annotation strip ----------
+\node[font=\scriptsize\itshape, text=black!60, align=center]
+    at (6.0, -2.3) {
+        One unified problem, two orthogonal corrections. Both plug-ins
+        attach to any base model $M$ without modifying its internals.
+    };
+
+\end{tikzpicture}
