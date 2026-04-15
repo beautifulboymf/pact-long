@@ -81,7 +81,7 @@ Because large-scale real-world graph uplift data does not exist, we validate the
 \begin{itemize}[leftmargin=*, itemsep=1pt, topsep=2pt]
     \item \textbf{Theoretical.} We prove that network position is a dual-root confounder and derive a PEHE decomposition that unifies bias and variance under a single latent cause (Section~\ref{sec:theory}).
     \item \textbf{Methodological.} We propose two corrections prescribed directly by the decomposition---GPE (input-level, bias) and Variance-Weighted Learning (loss-level, variance)---that compose with any base estimator (Section~\ref{sec:method}).
-    \item \textbf{Empirical.} Across 1{,}100+ runs on seven base models and ten datasets (five graph, five tabular), we validate the theory, and release cleaned versions of BlogCatalog and Flickr together with code at \url{https://anonymous.4open.science/r/CAVIN}.
+    \item \textbf{Empirical.} Across 1{,}100+ runs on seven base models and ten datasets (five graph, five tabular), we validate the theory, and release cleaned versions of BlogCatalog and Flickr together with code at \url{https://anonymous.4open.science/r/PACT}.
 \end{itemize}
 
 %% ====================================================================
@@ -138,7 +138,7 @@ Under this setup the squared PEHE decomposes as:
 \begin{equation}\label{eq:pehe_decomp}
     \mathrm{PEHE}^2 = \underbrace{\mathbb{E}\!\left[(\hat{\tau}(X) - \bar{\tau}(X))^2\right]}_{\text{bias}^2} + \underbrace{\mathbb{E}\!\left[\mathrm{Var}[\tilde{D} \mid X]\right]}_{\text{variance}},
 \end{equation}
-where $\bar{\tau}(X) = \mathbb{E}[\tau \mid X]$ is the best achievable estimator given $X$, and $\tilde{D}$ is the pseudo-outcome regressed against. The bias term is inflated whenever $Z^*$ confounds $T \leftarrow Z^* \to Y(t)$; the variance term is inflated whenever $\mathrm{Var}[\tilde{D} \mid X] = \sigma^2(X, Z^*)$ is position-dependent. We note that the variance term includes both irreducible outcome noise and first-stage estimation error from $\hat{\mu}_0, \hat{\mu}_1$; variance weighting reduces the propagation of noise into $\hat{\tau}$ via reweighting, while gradient-detached cross-fitting (Algorithm~\ref{alg:cavin}) mitigates circular amplification of first-stage errors. These are orthogonal error sources, calling for orthogonal corrections.
+where $\bar{\tau}(X) = \mathbb{E}[\tau \mid X]$ is the best achievable estimator given $X$, and $\tilde{D}$ is the pseudo-outcome regressed against. The bias term is inflated whenever $Z^*$ confounds $T \leftarrow Z^* \to Y(t)$; the variance term is inflated whenever $\mathrm{Var}[\tilde{D} \mid X] = \sigma^2(X, Z^*)$ is position-dependent. We note that the variance term includes both irreducible outcome noise and first-stage estimation error from $\hat{\mu}_0, \hat{\mu}_1$; variance weighting reduces the propagation of noise into $\hat{\tau}$ via reweighting, while gradient-detached cross-fitting (Algorithm~\ref{alg:pact}) mitigates circular amplification of first-stage errors. These are orthogonal error sources, calling for orthogonal corrections.
 
 \begin{proposition}[Network Position as Dual Error Root]\label{prop:dualroot}
 Under network unconfoundedness conditional on $(X, X_{\mathcal{N}}, Z^*)$:
@@ -206,11 +206,11 @@ The Gauss--Markov theorem~\cite{Aitken_1936} guarantees that WLS achieves $\math
     \label{fig:arch}
 \end{figure*}
 
-As shown in Figure~\ref{fig:arch}, our framework enhances any base model $M$ through two orthogonal plug-ins. First, node2vec embeddings are fused with raw features via GPE (Eqs.~\ref{eq:qkv}--\ref{eq:fuse}). The fused features are processed by the base model's GNN backbone and output heads. Finally, the outcome loss is reweighted by inverse variance estimates. The complete training procedure is formalized in Algorithm~\ref{alg:cavin}.
+As shown in Figure~\ref{fig:arch}, our framework enhances any base model $M$ through two orthogonal plug-ins. First, node2vec embeddings are fused with raw features via GPE (Eqs.~\ref{eq:qkv}--\ref{eq:fuse}). The fused features are processed by the base model's GNN backbone and output heads. Finally, the outcome loss is reweighted by inverse variance estimates. The complete training procedure is formalized in Algorithm~\ref{alg:pact}.
 
 \begin{algorithm}[t]
     \caption{Plug-in Training Procedure}
-    \label{alg:cavin}
+    \label{alg:pact}
     \begin{algorithmic}[1]
         \STATE \textbf{Input:} Data $\mathcal{D}=\{(X_i, T_i, Y_i)\}_{i=1}^n$, base model $M$
         \STATE \textbf{Parameters:} Smoothing $\delta$, epochs $K$
@@ -263,9 +263,9 @@ X5 & tabular & 200K & --- & 12 & binary \\
 
 \textbf{Tabular datasets.} To validate variance weighting on real-world data without graph structure, we evaluate on five tabular uplift benchmarks across six evaluation settings (Table~\ref{tab:datasets}): Criteo Uplift (1M rows, binary conversion), Hillstrom (42K, evaluated on both binary visit and continuous spend outcomes), RetailHero (200K, binary purchase), Lenta (690K, binary response), and X5 (200K, binary purchase with enriched features). For binary outcomes we apply the Bernoulli variance adaptation ($\sigma^2 = \mu(1-\mu)$); for the continuous Hillstrom spend outcome we use the learned $\log\sigma^2$ head.
 
-\textbf{Base models.} We test seven GNN-based ITE estimators spanning the timeline from 2016 to 2025: \emph{meta-learners}---BNN~\cite{johansson2016learning} (S-learner), TARNet~\cite{shalit2017estimating} (T-learner), and X-learner~\cite{kunzel2019metalearners}; \emph{graph causal models}---NetDeconf~\cite{guo2020learning} (GCN with Wasserstein balancing), GIAL~\cite{chu2021graph} (MI maximization and adversarial balancing), GNUM~\cite{zhu2023gnum} (transformed-target estimation), and GDC~\cite{hu2025gdc} (feature disentanglement, current SOTA). We also evaluate CAVIN (\textbf{C}ommunity-\textbf{A}ware \textbf{V}ariance-weighted \textbf{I}TE \textbf{N}etwork), our combined configuration (X-learner + GPE + Var). For a controlled comparison, all models share the same GNN backbone: a 5-layer GAT with hidden dimensions [256,128,128,128,128], 4-head attention, and 4-layer MLP outcome heads (hidden size 128). GPE uses 128-dimensional node2vec embeddings (100 walks, length 30, window 10) with 4-head cross-attention at dimension 256.
+\textbf{Base models.} We test seven GNN-based ITE estimators spanning the timeline from 2016 to 2025: \emph{meta-learners}---BNN~\cite{johansson2016learning} (S-learner), TARNet~\cite{shalit2017estimating} (T-learner), and X-learner~\cite{kunzel2019metalearners}; \emph{graph causal models}---NetDeconf~\cite{guo2020learning} (GCN with Wasserstein balancing), GIAL~\cite{chu2021graph} (MI maximization and adversarial balancing), GNUM~\cite{zhu2023gnum} (transformed-target estimation), and GDC~\cite{hu2025gdc} (feature disentanglement, current SOTA). We also evaluate PACT (\textbf{P}osition \textbf{A}s \textbf{C}onfounder for \textbf{T}reatment), our combined configuration (X-learner + GPE + Var). For a controlled comparison, all models share the same GNN backbone: a 5-layer GAT with hidden dimensions [256,128,128,128,128], 4-head attention, and 4-layer MLP outcome heads (hidden size 128). GPE uses 128-dimensional node2vec embeddings (100 walks, length 30, window 10) with 4-head cross-attention at dimension 256.
 
-\textbf{Training protocol.} All models are trained with Adam ($\text{lr}{=}10^{-3}$, weight decay $10^{-4}$, gradient clipping at norm 5) for 200 epochs with 60/20/20 train/val/test splits. All graph experiments use 5 random seeds; we report mean $\pm$ standard deviation. Tabular experiments also use 5 seeds. Early stopping selects on validation PEHE (graph) or validation Qini (tabular). Primary metrics: rooted PEHE ($\downarrow$), absolute ATE error ($\downarrow$), Qini coefficient ($\uparrow$). Extended ablation studies, statistical analyses, and additional visualizations are available in the supplementary materials at \url{https://anonymous.4open.science/r/CAVIN}.
+\textbf{Training protocol.} All models are trained with Adam ($\text{lr}{=}10^{-3}$, weight decay $10^{-4}$, gradient clipping at norm 5) for 200 epochs with 60/20/20 train/val/test splits. All graph experiments use 5 random seeds; we report mean $\pm$ standard deviation. Tabular experiments also use 5 seeds. Early stopping selects on validation PEHE (graph) or validation Qini (tabular). Primary metrics: rooted PEHE ($\downarrow$), absolute ATE error ($\downarrow$), Qini coefficient ($\uparrow$). Extended ablation studies, statistical analyses, and additional visualizations are available in the supplementary materials at \url{https://anonymous.4open.science/r/PACT}.
 
 \subsection{GPE as a Modular Plug-in}
 
