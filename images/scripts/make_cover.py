@@ -1,10 +1,18 @@
-"""Render Figure 1 (cover illustration) for the PACT paper.
+"""Render Figure 1 (cover illustration) for the PACT paper — v3.
 
-Produces `images/Uplift_cover.pdf` — a small social graph with two
-visible communities, a highlighted target node, and node radii scaled
-by heteroscedastic outcome-noise variance. Wire the visual to the
-dual-root thesis: same positional signal (community membership) drives
-both confounding bias and outcome-noise variance.
+Key upgrades over v2:
+  * Larger stochastic-block-model (~28 nodes per community) rendered with a
+    repulsive Kamada–Kawai layout so individual nodes and edges are visible
+    instead of a blob.
+  * Weak inter-community ties (multiple bridge edges) — looks like a real
+    social graph, not a staged two-island picture.
+  * sigma^2(Z_i) mapped to node *size* over a 4x range, plus outline width,
+    so heteroscedasticity reads at thumbnail size.
+  * Dual-root story made explicit: one horizontal baseline sits under the
+    graph with two compact panels — "bias root" (community position ->
+    T, Y(t)) and "variance root" (position -> sigma^2) — connected by a
+    single shared arrow to the latent Z*.
+  * Legend merged into the same baseline, no floating chips.
 
 Run from the repository root:
     python images/scripts/make_cover.py
@@ -12,7 +20,6 @@ Run from the repository root:
 
 from __future__ import annotations
 
-import math
 from pathlib import Path
 
 import matplotlib as mpl
@@ -21,18 +28,24 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
-SEED = 7
-OUT_DIR = Path(__file__).resolve().parents[1]  # pact-long/images
+SEED = 11
+OUT_DIR = Path(__file__).resolve().parents[1]
 OUT_PDF = OUT_DIR / "Uplift_cover.pdf"
 OUT_PNG = OUT_DIR / "Uplift_cover_preview.png"
 
+# Palette — cool blue + warm green + orange target + teal/purple accents
+# matching the paper's pactaccent teal and a complementary variance accent.
 COMM_BLUE = "#4C72B0"
 COMM_GREEN = "#55A868"
 TARGET_ORANGE = "#E08E44"
 HALO_ORANGE = "#F2B97C"
-EDGE_GREY = "#9E9E9E"
-TEXT_GREY = "#333333"
-NOISE_SHADE = "#D6D6D6"
+NOISE_EDGE = "#7E7E7E"
+EDGE_GREY = "#B0B0B0"
+TEXT_DARK = "#2B2B2B"
+TEXT_GREY = "#555555"
+BIAS_ACCENT = "#2A8A8A"      # teal, matches pactaccent in arch.tex
+VAR_ACCENT = "#8A4FAD"       # purple, complementary role
+LATENT_GREY = "#3A3A3A"
 
 mpl.rcParams.update(
     {
@@ -40,167 +53,137 @@ mpl.rcParams.update(
         "font.serif": ["DejaVu Serif", "Times New Roman"],
         "pdf.fonttype": 3,
         "ps.fonttype": 3,
-        "axes.linewidth": 0.0,
         "savefig.bbox": "tight",
-        "savefig.pad_inches": 0.04,
+        "savefig.pad_inches": 0.06,
     }
 )
 
 
-def build_graph(rng: np.random.Generator) -> tuple[nx.Graph, dict[int, tuple[float, float]], np.ndarray, int]:
-    """Two-community stochastic block model + target node."""
-    n1, n2 = 12, 12
-    p_in, p_out = 0.45, 0.04
+def build_graph(rng: np.random.Generator):
+    n1, n2 = 28, 28
+    p_in, p_out = 0.18, 0.012
     g = nx.stochastic_block_model(
         [n1, n2], [[p_in, p_out], [p_out, p_in]], seed=SEED
     )
-    pos = nx.spring_layout(g, seed=SEED, k=0.9, iterations=200)
 
-    # Put the two communities on left/right halves, spread wider.
-    for node in range(n1):
-        x, y = pos[node]
-        pos[node] = (x * 0.9 - 2.0, y * 0.9)
-    for node in range(n1, n1 + n2):
-        x, y = pos[node]
-        pos[node] = (x * 0.9 + 2.0, y * 0.9)
+    # Enforce at least 5 inter-community bridge edges.
+    inter = [(u, v) for u, v in g.edges if (u < n1) != (v < n1)]
+    while len(inter) < 5:
+        u = rng.integers(0, n1)
+        v = rng.integers(n1, n1 + n2)
+        if not g.has_edge(u, v):
+            g.add_edge(u, v)
+            inter.append((u, v))
 
-    # Heteroscedastic noise: higher near community boundaries and peripheries.
-    coords = np.array([pos[v] for v in g.nodes()])
-    centre_left = coords[:n1].mean(axis=0)
-    centre_right = coords[n1:].mean(axis=0)
-    d_left = np.linalg.norm(coords - centre_left, axis=1)
-    d_right = np.linalg.norm(coords - centre_right, axis=1)
-    # Distance to the nearer community centre, normalised; plus a small jitter.
-    proximity = np.minimum(d_left, d_right)
-    noise = proximity / proximity.max()
-    noise = 0.3 + 0.7 * noise  # map to [0.3, 1.0]
-    noise += rng.normal(0, 0.05, size=noise.shape)
-    noise = np.clip(noise, 0.25, 1.1)
+    # Compute positions with a bipartite-ish initial guess so the two
+    # communities lay out on the left and right halves, then refine with
+    # Kamada–Kawai for smooth spacing.
+    init = {}
+    for v in range(n1):
+        init[v] = (-1.6 + 0.2 * rng.normal(), 0.25 * rng.normal())
+    for v in range(n1, n1 + n2):
+        init[v] = (1.6 + 0.2 * rng.normal(), 0.25 * rng.normal())
+    pos = nx.kamada_kawai_layout(g, pos=init, scale=1.9)
 
-    # Choose the target: a bridge-like node, then move it to the midpoint
-    # between the two communities so it is visually in neither camp.
+    # Anchor communities left/right in case kamada tilted them.
+    for v in range(n1):
+        x, y = pos[v]
+        pos[v] = (-abs(x) - 0.4, y * 1.1)
+    for v in range(n1, n1 + n2):
+        x, y = pos[v]
+        pos[v] = (abs(x) + 0.4, y * 1.1)
+
+    # Heteroscedastic noise: highest near community boundaries (bridge-like
+    # nodes) and lowest deep inside a community. Use betweenness centrality
+    # as the proxy — high-betweenness nodes straddle the two camps.
     bc = nx.betweenness_centrality(g)
-    target = max(bc, key=bc.get)
-    pos[target] = (0.0, 0.15)
-    return g, pos, noise, target
+    bc_arr = np.array([bc[v] for v in g.nodes()])
+    if bc_arr.max() > 0:
+        bc_arr = bc_arr / bc_arr.max()
+    # Map to [0.15, 1.0]; add a pinch of jitter so nodes inside a community
+    # still vary.
+    noise = 0.15 + 0.85 * bc_arr
+    noise += rng.normal(0, 0.05, size=noise.shape)
+    noise = np.clip(noise, 0.10, 1.10)
+
+    # Target: the highest-betweenness node, pinned to the centre so it is
+    # visually between the two communities.
+    target = int(np.argmax(bc_arr))
+    pos[target] = (0.0, 0.1)
+    return g, pos, noise, target, n1
 
 
-def draw(ax, g, pos, noise, target):
-    n1 = 12
-
-    # 1) Soft background halos for the two communities (wider + more saturated).
-    for idx, (colour, members) in enumerate(
-        [(COMM_BLUE, range(n1)), (COMM_GREEN, range(n1, 2 * n1))]
-    ):
+def draw_graph(ax, g, pos, noise, target, n1):
+    # --- 1) soft community halos ----------------------------------
+    for colour, members in [
+        (COMM_BLUE, range(n1)),
+        (COMM_GREEN, range(n1, 2 * n1)),
+    ]:
         pts = np.array([pos[m] for m in members])
         centre = pts.mean(axis=0)
-        radius = 1.55
+        span = np.linalg.norm(pts - centre, axis=1).max() + 0.3
         halo = mpatches.Circle(
             centre,
-            radius,
+            span,
             facecolor=colour,
-            edgecolor=colour,
-            alpha=0.14,
-            linewidth=0.0,
+            edgecolor="none",
+            alpha=0.11,
             zorder=0,
         )
         ax.add_patch(halo)
 
-    # 2) Edges.
+    # --- 2) edges --------------------------------------------------
     for u, v in g.edges():
-        xs = [pos[u][0], pos[v][0]]
-        ys = [pos[u][1], pos[v][1]]
+        inter_edge = (u < n1) != (v < n1)
         is_target_edge = target in (u, v)
         ax.plot(
-            xs,
-            ys,
+            [pos[u][0], pos[v][0]],
+            [pos[u][1], pos[v][1]],
             color=EDGE_GREY,
-            linewidth=1.3 if is_target_edge else 0.7,
-            alpha=0.85 if is_target_edge else 0.32,
+            linewidth=1.1 if is_target_edge else (0.7 if inter_edge else 0.45),
+            alpha=0.85 if is_target_edge else (0.55 if inter_edge else 0.35),
             zorder=1,
+            solid_capstyle="round",
         )
 
-    # 3) Noise-shading rings (grey halos whose radius scales with sigma^2(Z_i)).
-    #    Muted so they visually sit *behind* the node colour instead of on top.
+    # --- 3) nodes --------------------------------------------------
+    #      size = 90 + 260 * noise    (≈ 4x dynamic range)
+    #      edge_width linearly scales with noise too
     for v in g.nodes():
         if v == target:
             continue
-        x, y = pos[v]
-        r = 0.12 + 0.18 * noise[v]
-        ring = mpatches.Circle(
-            (x, y),
-            r,
-            facecolor=NOISE_SHADE,
-            edgecolor="none",
-            alpha=0.28,
-            zorder=1.5,
-        )
-        ax.add_patch(ring)
-
-    # 4) Nodes.
-    for v in g.nodes():
-        x, y = pos[v]
         colour = COMM_BLUE if v < n1 else COMM_GREEN
-        if v == target:
-            continue
+        s = 90 + 260 * noise[v]
+        lw = 0.6 + 1.4 * noise[v]
         ax.scatter(
-            x,
-            y,
-            s=220,
+            pos[v][0],
+            pos[v][1],
+            s=s,
             c=colour,
-            edgecolors="white",
-            linewidth=1.2,
+            edgecolors=NOISE_EDGE,
+            linewidths=lw,
             zorder=3,
         )
 
-    # 5) Target node with orange halo on top.
+    # --- 4) target node (orange halo + dot) ------------------------
     tx, ty = pos[target]
     halo = mpatches.Circle(
-        (tx, ty),
-        0.36,
-        facecolor=HALO_ORANGE,
-        edgecolor="none",
-        alpha=0.55,
-        zorder=3.5,
+        (tx, ty), 0.28, facecolor=HALO_ORANGE, edgecolor="none",
+        alpha=0.55, zorder=3.4,
     )
     ax.add_patch(halo)
     ax.scatter(
-        tx,
-        ty,
+        tx, ty,
         s=320,
         c=TARGET_ORANGE,
         edgecolors="white",
-        linewidth=1.6,
+        linewidths=1.6,
         zorder=4,
-    )
-
-    # 6) Callouts — aligned with the phenomenon each points at.
-    ax.annotate(
-        "community membership\n"
-        r"confounds $T$ and $Y(t)$"
-        "\n(bias source)",
-        xy=(-2.0, 0.4),
-        xytext=(-3.5, 1.9),
-        fontsize=9.0,
-        color=COMM_BLUE,
-        ha="left",
-        arrowprops=dict(arrowstyle="-|>", color=COMM_BLUE, lw=0.9, shrinkA=0, shrinkB=6),
-    )
-    ax.annotate(
-        r"position drives noise $\sigma^2(Z_i)$"
-        "\n"
-        r"(variance source; ring radius $\propto \sigma^2$)",
-        xy=(2.1, -0.6),
-        xytext=(0.4, -2.3),
-        fontsize=9.0,
-        color=COMM_GREEN,
-        ha="left",
-        arrowprops=dict(arrowstyle="-|>", color=COMM_GREEN, lw=0.9, shrinkA=0, shrinkB=6),
     )
     ax.annotate(
         "target user\n(estimate ITE)",
-        xy=(tx, ty + 0.22),
-        xytext=(tx + 0.05, ty + 1.25),
+        xy=(tx, ty + 0.16),
+        xytext=(tx, ty + 1.05),
         fontsize=9.0,
         color=TARGET_ORANGE,
         ha="center",
@@ -208,34 +191,119 @@ def draw(ax, g, pos, noise, target):
         arrowprops=dict(arrowstyle="-|>", color=TARGET_ORANGE, lw=1.0, shrinkA=0, shrinkB=6),
     )
 
-    # 7) Legend chips — adequately spaced.
-    chip_y = -3.0
-    chip_specs = [
-        (COMM_BLUE, "community 1"),
-        (COMM_GREEN, "community 2"),
-        (TARGET_ORANGE, "target"),
-        (NOISE_SHADE, r"outcome noise $\sigma^2(Z_i)$"),
-    ]
-    chip_x = -3.6
-    for colour, label in chip_specs:
-        ax.scatter(chip_x, chip_y, s=110, c=colour, edgecolors="white", linewidth=1.0, zorder=5)
-        ax.text(chip_x + 0.2, chip_y, label, fontsize=8.5, va="center", color=TEXT_GREY)
-        chip_x += 2.1
 
-    ax.set_aspect("equal")
-    ax.set_xlim(-4.2, 4.2)
-    ax.set_ylim(-3.3, 2.3)
-    ax.axis("off")
+def draw_dual_root_baseline(ax):
+    """The explanatory baseline below the graph: Z* feeding two error roots."""
+    # Coordinates on the axes (same axes as the graph to keep everything in
+    # one canvas).
+    y = -2.05
+    # Latent node
+    z_xy = (0.0, y)
+    latent = mpatches.Circle(z_xy, 0.22, facecolor="white",
+                              edgecolor=LATENT_GREY, linewidth=1.0, zorder=5)
+    ax.add_patch(latent)
+    ax.text(0.0, y, r"$Z^*$", ha="center", va="center",
+            fontsize=10, color=LATENT_GREY, zorder=6)
+    ax.text(0.0, y - 0.38, "network\nposition",
+            ha="center", va="top", fontsize=7.5,
+            color=TEXT_GREY, style="italic")
+
+    # Left chip — bias root
+    left_cx = -2.55
+    chip_w, chip_h = 2.4, 0.9
+    left_rect = mpatches.FancyBboxPatch(
+        (left_cx - chip_w / 2, y - chip_h / 2), chip_w, chip_h,
+        boxstyle="round,pad=0.02,rounding_size=0.08",
+        linewidth=0.9, edgecolor=BIAS_ACCENT, facecolor=BIAS_ACCENT, alpha=0.12,
+        zorder=4,
+    )
+    ax.add_patch(left_rect)
+    ax.text(left_cx, y + 0.23, "bias root", fontsize=9.2,
+            ha="center", fontweight="bold", color=BIAS_ACCENT)
+    ax.text(left_cx, y + 0.02,
+            r"$Z^* \to T,\;\; Z^* \to Y(t)$",
+            fontsize=8.4, ha="center", color=TEXT_DARK)
+    ax.text(left_cx, y - 0.22,
+            "community position shifts treatment",
+            fontsize=7.4, ha="center", color=TEXT_GREY, style="italic")
+
+    # Right chip — variance root
+    right_cx = 2.55
+    right_rect = mpatches.FancyBboxPatch(
+        (right_cx - chip_w / 2, y - chip_h / 2), chip_w, chip_h,
+        boxstyle="round,pad=0.02,rounding_size=0.08",
+        linewidth=0.9, edgecolor=VAR_ACCENT, facecolor=VAR_ACCENT, alpha=0.10,
+        zorder=4,
+    )
+    ax.add_patch(right_rect)
+    ax.text(right_cx, y + 0.23, "variance root", fontsize=9.2,
+            ha="center", fontweight="bold", color=VAR_ACCENT)
+    ax.text(right_cx, y + 0.02, r"$Z^* \to \sigma^2(Y)$",
+            fontsize=8.4, ha="center", color=TEXT_DARK)
+    ax.text(right_cx, y - 0.22, "position shifts outcome noise",
+            fontsize=7.4, ha="center", color=TEXT_GREY, style="italic")
+
+    # Arrows from Z* to each chip
+    ax.annotate("", xy=(left_cx + chip_w / 2, y), xytext=(z_xy[0] - 0.22, y),
+                arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT, lw=1.2,
+                                shrinkA=0, shrinkB=2))
+    ax.annotate("", xy=(right_cx - chip_w / 2, y), xytext=(z_xy[0] + 0.22, y),
+                arrowprops=dict(arrowstyle="-|>", color=VAR_ACCENT, lw=1.2,
+                                shrinkA=0, shrinkB=2))
+
+    # Arrows from the graph (top of canvas) to Z*, rendering the idea that
+    # the *visual* phenomena above are instances of the two roots below.
+    ax.annotate("", xy=(-0.15, y + 0.4), xytext=(-1.7, -1.2),
+                arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT,
+                                lw=0.8, linestyle="dashed",
+                                shrinkA=0, shrinkB=4, alpha=0.75))
+    ax.annotate("", xy=(0.15, y + 0.4), xytext=(1.7, -1.2),
+                arrowprops=dict(arrowstyle="-|>", color=VAR_ACCENT,
+                                lw=0.8, linestyle="dashed",
+                                shrinkA=0, shrinkB=4, alpha=0.75))
+
+
+def draw_legend(ax, y):
+    chip_specs = [
+        (COMM_BLUE, "community 1", None),
+        (COMM_GREEN, "community 2", None),
+        (TARGET_ORANGE, "target", None),
+        (None, r"node size $\propto \sigma^2(Z_i)$", "sigma"),
+    ]
+    chip_x = -3.2
+    for colour, label, marker in chip_specs:
+        if marker == "sigma":
+            # draw two nested circles to show the size gradient
+            ax.scatter(chip_x - 0.12, y, s=80, c="#CFCFCF",
+                       edgecolors=NOISE_EDGE, linewidths=0.8, zorder=5)
+            ax.scatter(chip_x + 0.15, y, s=240, c="#CFCFCF",
+                       edgecolors=NOISE_EDGE, linewidths=1.4, zorder=5)
+            ax.text(chip_x + 0.42, y, label, fontsize=8.0, va="center",
+                    color=TEXT_GREY)
+        else:
+            ax.scatter(chip_x, y, s=120, c=colour, edgecolors="white",
+                       linewidths=1.0, zorder=5)
+            ax.text(chip_x + 0.2, y, label, fontsize=8.0, va="center",
+                    color=TEXT_GREY)
+        chip_x += 2.15
 
 
 def main() -> None:
     rng = np.random.default_rng(SEED)
-    g, pos, noise, target = build_graph(rng)
+    g, pos, noise, target, n1 = build_graph(rng)
 
-    fig, ax = plt.subplots(figsize=(7.2, 4.0))
-    draw(ax, g, pos, noise, target)
-    fig.savefig(OUT_PDF, format="pdf", transparent=False)
-    fig.savefig(OUT_PNG, format="png", dpi=220, transparent=False)
+    fig, ax = plt.subplots(figsize=(7.2, 4.8))
+    draw_graph(ax, g, pos, noise, target, n1)
+    draw_dual_root_baseline(ax)
+    draw_legend(ax, y=-3.2)
+
+    ax.set_aspect("equal")
+    ax.set_xlim(-4.2, 4.2)
+    ax.set_ylim(-3.6, 2.4)
+    ax.axis("off")
+
+    fig.savefig(OUT_PDF, format="pdf")
+    fig.savefig(OUT_PNG, format="png", dpi=220)
     plt.close(fig)
     print(f"wrote {OUT_PDF.relative_to(OUT_DIR.parent)}")
     print(f"wrote {OUT_PNG.relative_to(OUT_DIR.parent)}")
