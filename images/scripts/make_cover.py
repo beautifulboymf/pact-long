@@ -184,83 +184,85 @@ def draw_zone_b(ax):
 
 # ===================================================================
 # ZONE C — two plug-in cards with micro-visualizations
+# (All y-coordinates shifted up by 10 vs. v10 to close the gap between
+#  the bias^2/variance boxes and the cards, per user feedback on
+#  vertical whitespace.)
 # ===================================================================
 def draw_zone_c(ax):
+    SHIFT = 10  # shift all zone-C content up by this many units
+
     # =============== GPE card ===============
     gpe = mpatches.FancyBboxPatch(
-        (3.0, 8.0), 45.0, 66.0,
+        (3.0, 8.0 + SHIFT), 45.0, 66.0,
         boxstyle="round,pad=0.3,rounding_size=2.6",
         linewidth=1.3, edgecolor=BIAS_ACCENT,
         facecolor=BIAS_ACCENT, alpha=0.08, zorder=3,
     )
     ax.add_patch(gpe)
-    ax.text(25.5, 69.5, "GPE",
+    ax.text(25.5, 69.5 + SHIFT, "GPE",
             ha="center", va="center",
             fontsize=11.5, fontweight="bold", color=BIAS_ACCENT, zorder=5)
 
-    # Larger micro-diagram — the visual carries almost everything now.
     # Row 1: X  (+)  p(Z*)
-    _mini_box(ax, 7.0, 54.0, 11.0, 8.5, "$X$", BIAS_ACCENT, text_size=10)
-    ax.text(21.5, 58.25, "+", ha="center", va="center",
+    _mini_box(ax, 7.0, 54.0 + SHIFT, 11.0, 8.5, "$X$", BIAS_ACCENT, text_size=10)
+    ax.text(21.5, 58.25 + SHIFT, "+", ha="center", va="center",
             fontsize=13, color=BIAS_ACCENT, fontweight="bold", zorder=5)
-    _mini_box(ax, 25.0, 54.0, 19.0, 8.5, r"$p(Z^*)$",
+    _mini_box(ax, 25.0, 54.0 + SHIFT, 19.0, 8.5, r"$p(Z^*)$",
               BIAS_ACCENT, dashed=True, text_size=10)
-    ax.text(34.5, 50.0, "node2vec",
+    ax.text(34.5, 50.0 + SHIFT, "node2vec",
             ha="center", va="center",
             fontsize=6.2, style="italic", color=BIAS_ACCENT, zorder=5)
 
-    # Big down-arrow labelled in-line
-    ax.annotate("", xy=(25.5, 41.5), xytext=(25.5, 49.0),
+    # Down-arrow labelled in-line
+    ax.annotate("", xy=(25.5, 41.5 + SHIFT), xytext=(25.5, 49.0 + SHIFT),
                 arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT, lw=1.2,
                                 shrinkA=0, shrinkB=0),
                 zorder=5)
-    ax.text(29.0, 45.3, "cross-attn",
+    ax.text(29.0, 45.3 + SHIFT, "cross-attn",
             ha="left", va="center",
             fontsize=6.4, style="italic", color=BIAS_ACCENT, zorder=5)
 
-    # Row 2: fused input block -> M (arrow strictly between the two boxes)
-    _mini_box(ax, 7.0, 33.0, 22.0, 8.5, "fused $X$", BIAS_ACCENT, text_size=9)
-    ax.annotate("", xy=(33.5, 37.25), xytext=(29.2, 37.25),
+    # Row 2: fused input -> M
+    _mini_box(ax, 7.0, 33.0 + SHIFT, 22.0, 8.5, "fused $X$", BIAS_ACCENT, text_size=9)
+    ax.annotate("", xy=(33.5, 37.25 + SHIFT), xytext=(29.2, 37.25 + SHIFT),
                 arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT, lw=1.2,
                                 shrinkA=0, shrinkB=0),
                 zorder=5)
-    _mini_box(ax, 34.5, 33.0, 9.0, 8.5, "$M$", BIAS_ACCENT, text_size=10)
+    _mini_box(ax, 34.5, 33.0 + SHIFT, 9.0, 8.5, "$M$", BIAS_ACCENT, text_size=10)
 
-    # One bold take-away (no more verbose description lines)
-    ax.text(25.5, 21.5, r"$\Rightarrow\;$ reduces $\mathrm{bias}^2$",
+    # Takeaway lines
+    ax.text(25.5, 21.5 + SHIFT, r"$\Rightarrow\;$ reduces $\mathrm{bias}^2$",
             ha="center", va="center",
             fontsize=9.5, fontweight="bold", color=BIAS_ACCENT, zorder=5)
-    # small "cuts path" icon line
-    ax.text(25.5, 15.0,
+    ax.text(25.5, 15.0 + SHIFT,
             r"cuts $Z^*\!\to T,\, Y(t)$",
             ha="center", va="center",
             fontsize=7.0, style="italic", color=BIAS_ACCENT, zorder=5)
 
     # =============== VWL card ===============
     vwl = mpatches.FancyBboxPatch(
-        (52.0, 8.0), 45.0, 66.0,
+        (52.0, 8.0 + SHIFT), 45.0, 66.0,
         boxstyle="round,pad=0.3,rounding_size=2.6",
         linewidth=1.3, edgecolor=VAR_ACCENT,
         facecolor=VAR_ACCENT, alpha=0.08, zorder=3,
     )
     ax.add_patch(vwl)
-    # Title on TWO lines so it never overflows the card.
-    ax.text(74.5, 70.8, "Variance-Weighted",
+    ax.text(74.5, 70.8 + SHIFT, "Variance-Weighted",
             ha="center", va="center",
             fontsize=9.8, fontweight="bold", color=VAR_ACCENT, zorder=5)
-    ax.text(74.5, 66.5, "Loss",
+    ax.text(74.5, 66.5 + SHIFT, "Loss",
             ha="center", va="center",
             fontsize=9.8, fontweight="bold", color=VAR_ACCENT, zorder=5)
 
-    # Tight key formula
-    ax.text(74.5, 57.5,
+    # Key formula
+    ax.text(74.5, 57.5 + SHIFT,
             r"$\mathcal{L}\;=\;\sum_{i}\,w_i\,(D_i - \hat\tau)^2$",
             ha="center", va="center",
             fontsize=9.3, color=TEXT_DARK, zorder=5)
 
-    # Large bar chart — the main visual now, with wider bars.
+    # Bar chart
     bar_base_x = 58.0
-    bar_base_y = 32.0
+    bar_base_y = 32.0 + SHIFT
     bar_labels = [r"low $\sigma^2$", "mid", r"high $\sigma^2$"]
     bar_heights = [11.0, 6.0, 2.5]
     bar_alphas = [0.90, 0.58, 0.28]
@@ -274,20 +276,19 @@ def draw_zone_c(ax):
         ax.text(x + 3.25, bar_base_y - 1.7, lbl,
                 ha="center", va="top",
                 fontsize=6.0, color=VAR_ACCENT, zorder=5)
-    # weight-axis label, tucked right
-    ax.annotate("", xy=(87.8, 32.0), xytext=(87.8, 44.5),
+    ax.annotate("", xy=(87.8, 32.0 + SHIFT), xytext=(87.8, 44.5 + SHIFT),
                 arrowprops=dict(arrowstyle="<-", color=VAR_ACCENT, lw=0.8,
                                 shrinkA=0, shrinkB=0),
                 zorder=5)
-    ax.text(89.0, 38.0, r"$w_i$",
+    ax.text(89.0, 38.0 + SHIFT, r"$w_i$",
             ha="left", va="center",
             fontsize=7.8, color=VAR_ACCENT, style="italic", zorder=5)
 
-    # Bold take-away
-    ax.text(74.5, 21.5, r"$\Rightarrow\;$ reduces variance",
+    # Takeaway lines
+    ax.text(74.5, 21.5 + SHIFT, r"$\Rightarrow\;$ reduces variance",
             ha="center", va="center",
             fontsize=9.5, fontweight="bold", color=VAR_ACCENT, zorder=5)
-    ax.text(74.5, 15.0,
+    ax.text(74.5, 15.0 + SHIFT,
             r"cuts $Z^*\!\to \sigma^2(Y)$",
             ha="center", va="center",
             fontsize=7.0, style="italic", color=VAR_ACCENT, zorder=5)
@@ -309,10 +310,10 @@ def _mini_box(ax, x, y, w, h, label, colour, *, dashed=False, text_size=7.5):
 
 
 def main():
-    fig = plt.figure(figsize=(3.45, 5.45))
+    fig = plt.figure(figsize=(3.45, 5.0))
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, 100)
-    ax.set_ylim(6, 155)
+    ax.set_ylim(15, 155)
     ax.axis("off")
 
     ax.text(50.0, 151.0,
