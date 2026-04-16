@@ -189,10 +189,9 @@ def draw_zone_b(ax):
 #  vertical whitespace.)
 # ===================================================================
 def draw_zone_c(ax):
-    # Content y-coordinates are absolute (already post-shift from v11).
-    # Card height reduced from 66 -> 54 units; internal spacing tightened
-    # so the formula / bar-chart / takeaway lines pack closer together.
-    CARD_Y = 24
+    # Cards shifted up +6 so their top sits close (4 units) below the
+    # bias^2/variance boxes.
+    CARD_Y = 30
     CARD_H = 54
 
     # =============== GPE card ===============
@@ -203,42 +202,42 @@ def draw_zone_c(ax):
         facecolor=BIAS_ACCENT, alpha=0.08, zorder=3,
     )
     ax.add_patch(gpe)
-    ax.text(25.5, 73.0, "GPE",
+    ax.text(25.5, 79.0, "GPE",
             ha="center", va="center",
             fontsize=11.5, fontweight="bold", color=BIAS_ACCENT, zorder=5)
 
     # Row 1: X  (+)  p(Z*)
-    _mini_box(ax, 7.0, 60.0, 11.0, 7.5, "$X$", BIAS_ACCENT, text_size=10)
-    ax.text(21.5, 63.75, "+", ha="center", va="center",
+    _mini_box(ax, 7.0, 66.0, 11.0, 7.5, "$X$", BIAS_ACCENT, text_size=10)
+    ax.text(21.5, 69.75, "+", ha="center", va="center",
             fontsize=13, color=BIAS_ACCENT, fontweight="bold", zorder=5)
-    _mini_box(ax, 25.0, 60.0, 19.0, 7.5, r"$p(Z^*)$",
+    _mini_box(ax, 25.0, 66.0, 19.0, 7.5, r"$p(Z^*)$",
               BIAS_ACCENT, dashed=True, text_size=10)
-    ax.text(34.5, 56.2, "node2vec",
+    ax.text(34.5, 62.2, "node2vec",
             ha="center", va="center",
             fontsize=6.2, style="italic", color=BIAS_ACCENT, zorder=5)
 
     # Compact down-arrow labelled in-line
-    ax.annotate("", xy=(25.5, 51.0), xytext=(25.5, 55.5),
+    ax.annotate("", xy=(25.5, 57.0), xytext=(25.5, 61.5),
                 arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT, lw=1.2,
                                 shrinkA=0, shrinkB=0),
                 zorder=5)
-    ax.text(29.0, 53.2, "cross-attn",
+    ax.text(29.0, 59.2, "cross-attn",
             ha="left", va="center",
             fontsize=6.4, style="italic", color=BIAS_ACCENT, zorder=5)
 
     # Row 2: fused input -> M
-    _mini_box(ax, 7.0, 43.0, 22.0, 7.5, "fused $X$", BIAS_ACCENT, text_size=9)
-    ax.annotate("", xy=(33.5, 46.75), xytext=(29.2, 46.75),
+    _mini_box(ax, 7.0, 49.0, 22.0, 7.5, "fused $X$", BIAS_ACCENT, text_size=9)
+    ax.annotate("", xy=(33.5, 52.75), xytext=(29.2, 52.75),
                 arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT, lw=1.2,
                                 shrinkA=0, shrinkB=0),
                 zorder=5)
-    _mini_box(ax, 34.5, 43.0, 9.0, 7.5, "$M$", BIAS_ACCENT, text_size=10)
+    _mini_box(ax, 34.5, 49.0, 9.0, 7.5, "$M$", BIAS_ACCENT, text_size=10)
 
-    # Takeaway lines — tight against row 2 above and each other
-    ax.text(25.5, 36.5, r"$\Rightarrow\;$ reduces $\mathrm{bias}^2$",
+    # Takeaway lines
+    ax.text(25.5, 42.5, r"$\Rightarrow\;$ reduces $\mathrm{bias}^2$",
             ha="center", va="center",
             fontsize=9.5, fontweight="bold", color=BIAS_ACCENT, zorder=5)
-    ax.text(25.5, 31.5,
+    ax.text(25.5, 37.5,
             r"cuts $Z^*\!\to T,\, Y(t)$",
             ha="center", va="center",
             fontsize=7.0, style="italic", color=BIAS_ACCENT, zorder=5)
@@ -251,22 +250,22 @@ def draw_zone_c(ax):
         facecolor=VAR_ACCENT, alpha=0.08, zorder=3,
     )
     ax.add_patch(vwl)
-    ax.text(74.5, 74.0, "Variance-Weighted",
+    ax.text(74.5, 80.0, "Variance-Weighted",
             ha="center", va="center",
             fontsize=9.8, fontweight="bold", color=VAR_ACCENT, zorder=5)
-    ax.text(74.5, 69.8, "Loss",
+    ax.text(74.5, 75.8, "Loss",
             ha="center", va="center",
             fontsize=9.8, fontweight="bold", color=VAR_ACCENT, zorder=5)
 
-    # Formula — moved closer to the bar chart below
-    ax.text(74.5, 62.5,
+    # Formula
+    ax.text(74.5, 68.5,
             r"$\mathcal{L}\;=\;\sum_{i}\,w_i\,(D_i - \hat\tau)^2$",
             ha="center", va="center",
             fontsize=9.3, color=TEXT_DARK, zorder=5)
 
-    # Bar chart — raised slightly to reduce the formula->bars gap
+    # Bar chart
     bar_base_x = 58.0
-    bar_base_y = 46.0
+    bar_base_y = 52.0
     bar_labels = [r"low $\sigma^2$", "mid", r"high $\sigma^2$"]
     bar_heights = [10.0, 5.5, 2.3]
     bar_alphas = [0.90, 0.58, 0.28]
@@ -280,19 +279,19 @@ def draw_zone_c(ax):
         ax.text(x + 3.25, bar_base_y - 1.5, lbl,
                 ha="center", va="top",
                 fontsize=6.0, color=VAR_ACCENT, zorder=5)
-    ax.annotate("", xy=(87.8, 46.0), xytext=(87.8, 57.5),
+    ax.annotate("", xy=(87.8, 52.0), xytext=(87.8, 63.5),
                 arrowprops=dict(arrowstyle="<-", color=VAR_ACCENT, lw=0.8,
                                 shrinkA=0, shrinkB=0),
                 zorder=5)
-    ax.text(89.0, 51.5, r"$w_i$",
+    ax.text(89.0, 57.5, r"$w_i$",
             ha="left", va="center",
             fontsize=7.8, color=VAR_ACCENT, style="italic", zorder=5)
 
-    # Takeaway lines — aligned with GPE card's takeaways
-    ax.text(74.5, 36.5, r"$\Rightarrow\;$ reduces variance",
+    # Takeaway lines
+    ax.text(74.5, 42.5, r"$\Rightarrow\;$ reduces variance",
             ha="center", va="center",
             fontsize=9.5, fontweight="bold", color=VAR_ACCENT, zorder=5)
-    ax.text(74.5, 31.5,
+    ax.text(74.5, 37.5,
             r"cuts $Z^*\!\to \sigma^2(Y)$",
             ha="center", va="center",
             fontsize=7.0, style="italic", color=VAR_ACCENT, zorder=5)
@@ -314,10 +313,10 @@ def _mini_box(ax, x, y, w, h, label, colour, *, dashed=False, text_size=7.5):
 
 
 def main():
-    fig = plt.figure(figsize=(3.45, 4.75))
+    fig = plt.figure(figsize=(3.45, 4.55))
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, 100)
-    ax.set_ylim(22, 155)
+    ax.set_ylim(28, 155)
     ax.axis("off")
 
     ax.text(50.0, 151.0,
