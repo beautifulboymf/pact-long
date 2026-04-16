@@ -1,17 +1,17 @@
-"""Render Figure 1 (cover illustration) for the PACT paper — v4.
+"""Render Figure 1 (cover illustration) for the PACT paper — v5.
 
-Design: twin panels of the same graph, colour-coded by two different
-consequences of the same latent structural position Z*.
-  Left panel  : treatment propensity pi_i = sigmoid(alpha * z_i)
-                (coral -> grey -> teal diverging colourmap)
-  Right panel : outcome-noise variance sigma^2_i = monotone(|z_i|)
-                (white -> purple sequential colourmap)
-A banner above both panels names the single latent cause and cites
-Proposition 1.
-
-z_i is the Fiedler vector of the graph Laplacian — a principled
-continuous 1-D "structural position" score that drops any notion of
-discrete community. No community colouring anywhere.
+Design changes over v4:
+  * 2-D latent positions (not 1-D Fiedler). Horizontal axis drives the
+    LEFT panel's propensity; vertical axis drives the RIGHT panel's
+    variance. The two channels therefore dissociate on individual
+    nodes while still sharing a single latent cause Z*.
+  * Sparser graph: 30 nodes, radius-ball connectivity thinned to
+    average degree ~3.2. No hairballs.
+  * Representative "target" user pinned near (0, 0) in latent space —
+    medium propensity and medium variance — with a visible halo.
+  * Per-node sampling noise so propensity and variance values are not
+    deterministic functions of position; the reader sees statistical
+    co-variation rather than two identical colourmaps.
 
 Run from the repository root:
     python images/scripts/make_cover.py
@@ -27,15 +27,16 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
-SEED = 23
+SEED = 41
 OUT_DIR = Path(__file__).resolve().parents[1]
 OUT_PDF = OUT_DIR / "Uplift_cover.pdf"
 OUT_PNG = OUT_DIR / "Uplift_cover_preview.png"
 
-# ---- palette (matches arch.tex) -----------------------------------
-BIAS_ACCENT = "#2A8A8A"     # teal = bias-pathway accent
-VAR_ACCENT = "#8A4FAD"      # purple = variance-pathway accent
-EDGE_GREY = "#B3B3B3"
+BIAS_ACCENT = "#2A8A8A"    # teal, bias channel
+VAR_ACCENT = "#8A4FAD"     # purple, variance channel
+TARGET_ORANGE = "#E08E44"
+HALO_ORANGE = "#F2B97C"
+EDGE_GREY = "#D0D0D0"
 TEXT_DARK = "#222222"
 TEXT_GREY = "#555555"
 LATENT_GREY = "#333333"
@@ -52,56 +53,127 @@ mpl.rcParams.update(
 )
 
 
-def make_graph(rng: np.random.Generator) -> tuple[nx.Graph, dict[int, tuple[float, float]], np.ndarray]:
-    """A mild-modularity graph that is *not* a clean two-community SBM."""
-    n = 48
-    # Build a soft latent-position graph: each node is placed along a line in
-    # [-1, 1] (our z*), edges formed with probability decaying in distance.
-    latent = np.sort(rng.uniform(-1, 1, size=n))
-    g = nx.Graph()
-    g.add_nodes_from(range(n))
+def sample_latent(n: int, rng: np.random.Generator) -> np.ndarray:
+    """Gaussian-mixture latent positions in 2-D, centred at origin."""
+    centres = np.array([[-1.2, 0.3], [1.1, 0.2], [0.0, -1.0], [0.1, 1.1]])
+    weights = [0.32, 0.32, 0.18, 0.18]
+    assignments = rng.choice(len(centres), size=n, p=weights)
+    points = centres[assignments] + 0.45 * rng.normal(size=(n, 2))
+    # Centre the cloud on the origin (so the anchor point sits at (0,0)).
+    points = points - points.mean(axis=0, keepdims=True)
+    return points
+
+
+def build_graph(positions: np.ndarray, rng: np.random.Generator,
+                target_degree: float = 3.2) -> nx.Graph:
+    """Radius-ball graph, thinned down to a target average degree."""
+    n = positions.shape[0]
+    dists = np.linalg.norm(
+        positions[:, None, :] - positions[None, :, :], axis=-1
+    )
+    # First pass: connect everything within a radius that gives plenty of
+    # candidate edges; we then thin.
+    radius = 1.1
+    candidates = []
     for i in range(n):
         for j in range(i + 1, n):
-            d = abs(latent[i] - latent[j])
-            p = 0.85 * np.exp(-4.5 * d)
-            if rng.random() < p:
-                g.add_edge(i, j)
-    # Guarantee connectivity by adding a spanning chain if needed.
-    if not nx.is_connected(g):
-        comps = list(nx.connected_components(g))
-        for a, b in zip(comps, comps[1:]):
-            g.add_edge(next(iter(a)), next(iter(b)))
+            if dists[i, j] < radius:
+                # short edges get higher score; random jitter so ties break.
+                score = dists[i, j] + 0.15 * rng.random()
+                candidates.append((score, i, j))
+    candidates.sort()
 
-    # Compute the Fiedler vector (second eigenvector of the normalised
-    # Laplacian). We do this by hand with numpy to avoid a scipy.sparse
-    # version mismatch with networkx's built-in path.
-    A = nx.to_numpy_array(g, nodelist=range(n))
-    D = np.diag(A.sum(axis=1))
-    L = D - A
-    # Symmetric eigendecomposition, ascending order.
-    eigvals, eigvecs = np.linalg.eigh(L)
-    fiedler = eigvecs[:, 1]
-    # Normalise to [-1, 1] so downstream mappings are stable.
-    fiedler = fiedler / max(np.max(np.abs(fiedler)), 1e-9)
+    g = nx.Graph()
+    g.add_nodes_from(range(n))
 
-    # Layout: Kamada–Kawai using the Fiedler vector as one anchoring coord
-    # so the 1-D structure is visible, with a second perpendicular coord for
-    # visual spread.
-    init = {i: (fiedler[i] * 2.0, rng.normal(0, 0.35)) for i in range(n)}
-    pos = nx.kamada_kawai_layout(g, pos=init, scale=1.8)
+    # Phase 1 — ensure connectivity via a minimum spanning tree of the
+    # fully-connected distance graph.
+    mst = nx.minimum_spanning_tree(
+        nx.from_numpy_array(dists), algorithm="kruskal"
+    )
+    g.add_edges_from(mst.edges())
 
-    # Re-anchor so the Fiedler axis remains horizontal.
-    xs = np.array([pos[i][0] for i in range(n)])
-    ys = np.array([pos[i][1] for i in range(n)])
-    # Align x with the Fiedler vector (sign-flip if inverted).
-    if np.corrcoef(xs, fiedler)[0, 1] < 0:
-        fiedler = -fiedler
-    return g, pos, fiedler
+    # Phase 2 — add short-range candidate edges until we hit target degree.
+    target_edges = int(round(target_degree * n / 2))
+    for _score, i, j in candidates:
+        if g.number_of_edges() >= target_edges:
+            break
+        if not g.has_edge(i, j):
+            g.add_edge(i, j)
+
+    return g
 
 
-def _draw_graph_panel(ax, g, pos, node_values, cmap, vmin, vmax,
-                      border_colour, subtitle, latent_expr):
-    """Shared panel renderer."""
+def main() -> None:
+    rng = np.random.default_rng(SEED)
+
+    n = 30
+    lat = sample_latent(n, rng)
+
+    # Pin one node to the origin — the "target user" anchor.
+    target = int(np.argmin(np.linalg.norm(lat, axis=1)))
+    lat[target] = [0.0, 0.0]
+
+    g = build_graph(lat, rng)
+
+    # Layout: use latent positions directly. Tiny jitter for labels but keep
+    # the correlation between page-position and latent-position.
+    pos = {i: tuple(lat[i]) for i in range(n)}
+
+    # --- derive the two channels -------------------------------------
+    # Left panel: treatment propensity tracks the HORIZONTAL axis.
+    pi_clean = 1.0 / (1.0 + np.exp(-2.3 * lat[:, 0]))
+    pi = np.clip(pi_clean + rng.normal(0, 0.07, size=n), 0.01, 0.99)
+
+    # Right panel: outcome noise variance tracks the VERTICAL axis magnitude.
+    sigma2_clean = 0.25 + 0.75 * np.clip(np.abs(lat[:, 1]) / 1.5, 0, 1)
+    sigma2 = np.clip(sigma2_clean + rng.normal(0, 0.08, size=n), 0.02, 1.0)
+    sigma2 = (sigma2 - sigma2.min()) / (sigma2.max() - sigma2.min())
+
+    # --- colourmaps --------------------------------------------------
+    prop_cmap = mpl.colors.LinearSegmentedColormap.from_list(
+        "prop_div", ["#E07A5F", "#EAE4D2", BIAS_ACCENT], N=256
+    )
+    var_cmap = mpl.colors.LinearSegmentedColormap.from_list(
+        "var_seq", ["#F7F2FB", "#D8C0E4", VAR_ACCENT, "#4A2566"], N=256
+    )
+
+    # --- figure layout -----------------------------------------------
+    fig = plt.figure(figsize=(7.6, 4.8))
+    ax_left = fig.add_axes([0.05, 0.12, 0.42, 0.64])
+    ax_right = fig.add_axes([0.535, 0.12, 0.42, 0.64])
+
+    _draw_panel(
+        ax_left, g, pos, pi, prop_cmap, 0.0, 1.0,
+        title="treatment propensity",
+        title_color=BIAS_ACCENT,
+        subtitle=r"$Z^* \to T,\;\; Z^* \to Y(t)$ — bias root",
+        target=target,
+    )
+    _draw_panel(
+        ax_right, g, pos, sigma2, var_cmap, 0.0, 1.0,
+        title="outcome-noise variance",
+        title_color=VAR_ACCENT,
+        subtitle=r"$Z^* \to \sigma^2(Y)$ — variance root",
+        target=target,
+    )
+
+    _add_colourbar(fig, ax_left, prop_cmap, 0.0, 1.0,
+                   r"$\pi_i = \Pr(T_i = 1 \mid Z^*_i)$")
+    _add_colourbar(fig, ax_right, var_cmap, 0.0, 1.0,
+                   r"$\sigma^2_i = \mathrm{Var}(Y_i \mid Z^*_i)$")
+
+    _draw_banner(fig)
+
+    fig.savefig(OUT_PDF, format="pdf")
+    fig.savefig(OUT_PNG, format="png", dpi=220)
+    plt.close(fig)
+    print(f"wrote {OUT_PDF.relative_to(OUT_DIR.parent)}")
+    print(f"wrote {OUT_PNG.relative_to(OUT_DIR.parent)}")
+
+
+def _draw_panel(ax, g, pos, values, cmap, vmin, vmax,
+                *, title, title_color, subtitle, target):
     # Edges
     for u, v in g.edges():
         ax.plot(
@@ -113,160 +185,120 @@ def _draw_graph_panel(ax, g, pos, node_values, cmap, vmin, vmax,
             zorder=1,
             solid_capstyle="round",
         )
-    # Nodes
-    cm = plt.get_cmap(cmap)
+
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
-    for i in g.nodes():
-        x, y = pos[i]
-        colour = cm(norm(node_values[i]))
+    cm = plt.get_cmap(cmap)
+
+    # Non-target nodes
+    for v in g.nodes():
+        if v == target:
+            continue
+        x, y = pos[v]
         ax.scatter(
             x, y,
-            s=170,
-            c=[colour],
-            edgecolors="#FFFFFF",
+            s=185,
+            c=[cm(norm(values[v]))],
+            edgecolors="white",
             linewidths=0.9,
             zorder=3,
         )
-    # Panel border (soft)
+
+    # Target node halo + dot — same orange in both panels so reader
+    # tracks the same node across the two channels.
+    tx, ty = pos[target]
+    ax.add_patch(mpatches.Circle(
+        (tx, ty), 0.24, facecolor=HALO_ORANGE, edgecolor="none",
+        alpha=0.55, zorder=3.4,
+    ))
+    ax.scatter(
+        tx, ty,
+        s=260,
+        c=[cm(norm(values[target]))],
+        edgecolors=TARGET_ORANGE,
+        linewidths=1.8,
+        zorder=4,
+    )
+
+    # Title + subtitle inside the panel
+    ax.text(0.02, 0.97, title, transform=ax.transAxes,
+            ha="left", va="top", fontsize=11.0, fontweight="bold",
+            color=title_color)
+    ax.text(0.02, 0.90, subtitle, transform=ax.transAxes,
+            ha="left", va="top", fontsize=9.0, color=TEXT_GREY)
+
+    ax.set_aspect("equal")
     for spine in ax.spines.values():
         spine.set_visible(False)
-    ax.set_aspect("equal")
-
-    # Titles
-    ax.set_title(subtitle, color=border_colour, fontsize=10.2,
-                 fontweight="bold", pad=10)
-    # Latent-DAG caption under the title
-    ax.text(0.5, 0.985, latent_expr, transform=ax.transAxes,
-            ha="center", va="top", fontsize=8.8,
-            color=TEXT_DARK)
-
     ax.set_xticks([])
     ax.set_yticks([])
-    ax.set_xlim(min(p[0] for p in pos.values()) - 0.3,
-                max(p[0] for p in pos.values()) + 0.3)
-    ax.set_ylim(min(p[1] for p in pos.values()) - 0.3,
-                max(p[1] for p in pos.values()) + 0.3)
-    return cm, norm
+
+    # Axis limits tight on the content.
+    xs = [p[0] for p in pos.values()]
+    ys = [p[1] for p in pos.values()]
+    pad = 0.35
+    ax.set_xlim(min(xs) - pad, max(xs) + pad)
+    ax.set_ylim(min(ys) - pad, max(ys) + pad)
 
 
-def _add_colourbar(fig, ax, cmap, norm, label):
-    # Add a thin horizontal colourbar UNDER the panel.
+def _add_colourbar(fig, ax, cmap, vmin, vmax, label):
     bbox = ax.get_position()
-    cax = fig.add_axes([bbox.x0 + 0.05, bbox.y0 - 0.03,
-                        bbox.width - 0.1, 0.015])
+    cax = fig.add_axes([bbox.x0 + 0.06, bbox.y0 - 0.045,
+                        bbox.width - 0.12, 0.016])
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
     cb = mpl.colorbar.ColorbarBase(
         cax, cmap=plt.get_cmap(cmap), norm=norm,
         orientation="horizontal",
     )
     cb.outline.set_linewidth(0.3)
-    cb.ax.tick_params(labelsize=7, length=2, pad=1.5, colors=TEXT_GREY)
-    cb.set_label(label, fontsize=7.5, color=TEXT_GREY, labelpad=2)
+    cb.ax.tick_params(labelsize=7.5, length=2, pad=1.5, colors=TEXT_GREY)
+    cb.set_label(label, fontsize=7.8, color=TEXT_GREY, labelpad=2)
 
 
-def draw_top_banner(fig):
-    """Clean banner above the two panels naming the shared latent cause."""
-    ax = fig.add_axes([0.04, 0.865, 0.92, 0.13])
+def _draw_banner(fig):
+    ax = fig.add_axes([0.05, 0.81, 0.92, 0.17])
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
 
-    # Central Z* pill — made wider and taller so the math does not overflow.
-    pill_x, pill_y = 0.30, 0.26
-    pill_w, pill_h = 0.40, 0.56
+    # Central pill — large enough to comfortably hold two lines.
+    pill_x, pill_y = 0.28, 0.15
+    pill_w, pill_h = 0.44, 0.72
     pill = mpatches.FancyBboxPatch(
         (pill_x, pill_y), pill_w, pill_h,
-        boxstyle="round,pad=0.015,rounding_size=0.05",
+        boxstyle="round,pad=0.015,rounding_size=0.04",
         linewidth=1.1, edgecolor=LATENT_GREY, facecolor="#F7F5F2",
         zorder=3,
     )
     ax.add_patch(pill)
-    ax.text(pill_x + pill_w / 2, pill_y + 0.42,
-            r"latent position $Z^*$",
-            ha="center", va="center",
-            fontsize=10.0, color=LATENT_GREY, fontweight="bold")
-    ax.text(pill_x + pill_w / 2, pill_y + 0.16,
-            r"$\Rightarrow\;\mathrm{PEHE}^2 = \mathrm{bias}^2 + \mathrm{variance}$"
-            "   (Prop. 1)",
-            ha="center", va="center", fontsize=8.8, color=TEXT_DARK)
-
-    # Left arrow with bias label
-    ax.annotate("", xy=(0.09, pill_y + pill_h / 2),
-                xytext=(pill_x - 0.005, pill_y + pill_h / 2),
-                arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT,
-                                lw=1.2, shrinkA=2, shrinkB=2))
-    ax.text(0.2, pill_y + pill_h / 2 + 0.22,
-            "bias channel", ha="center", va="bottom",
-            fontsize=8.8, color=BIAS_ACCENT, fontweight="bold")
-
-    # Right arrow with variance label
-    ax.annotate("", xy=(0.91, pill_y + pill_h / 2),
-                xytext=(pill_x + pill_w + 0.005, pill_y + pill_h / 2),
-                arrowprops=dict(arrowstyle="-|>", color=VAR_ACCENT,
-                                lw=1.2, shrinkA=2, shrinkB=2))
-    ax.text(0.8, pill_y + pill_h / 2 + 0.22,
-            "variance channel", ha="center", va="bottom",
-            fontsize=8.8, color=VAR_ACCENT, fontweight="bold")
-
-    # Subtitle strap
-    ax.text(0.5, 0.05,
-            "same graph, two colourings; both track the same latent position",
-            ha="center", va="center", fontsize=8.2, color=TEXT_GREY,
+    ax.text(0.5, pill_y + 0.65 * pill_h,
+            r"latent position $Z^*$", ha="center", va="center",
+            fontsize=11.0, color=LATENT_GREY, fontweight="bold")
+    ax.text(0.5, pill_y + 0.32 * pill_h,
+            r"$\Rightarrow\;\mathrm{PEHE}^2 = \mathrm{bias}^2 + \mathrm{variance}$",
+            ha="center", va="center", fontsize=9.3, color=TEXT_DARK)
+    ax.text(0.5, pill_y + 0.09 * pill_h,
+            "(Proposition 1)",
+            ha="center", va="center", fontsize=8.5, color=TEXT_GREY,
             style="italic")
 
+    # Left channel arrow/label.
+    mid_y = pill_y + 0.5 * pill_h
+    ax.annotate("", xy=(0.045, mid_y),
+                xytext=(pill_x - 0.003, mid_y),
+                arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT,
+                                lw=1.3, shrinkA=2, shrinkB=2))
+    ax.text((pill_x - 0.005 + 0.045) / 2, mid_y + 0.14,
+            "bias channel", ha="center", va="bottom",
+            fontsize=9.6, color=BIAS_ACCENT, fontweight="bold")
 
-def main() -> None:
-    rng = np.random.default_rng(SEED)
-    g, pos, z = make_graph(rng)
-
-    # ---- derive the two channels from z ----
-    # Treatment propensity: diverging, centred at 0.5.
-    pi = 1.0 / (1.0 + np.exp(-2.8 * z))
-    # Outcome-noise variance: U-shaped in z (position-magnitude drives noise),
-    # normalised so the lowest-variance node is near 0 and the highest near 1.
-    sigma2 = 0.15 + 0.85 * np.abs(z)
-    sigma2 = (sigma2 - sigma2.min()) / (sigma2.max() - sigma2.min())
-
-    # Build the colour maps.
-    # Diverging coral↔teal for propensity (untreated=coral, treated=teal).
-    prop_cmap = mpl.colors.LinearSegmentedColormap.from_list(
-        "prop_div", ["#E07A5F", "#EAE4D2", BIAS_ACCENT], N=256
-    )
-    # White -> purple sequential for variance.
-    var_cmap = mpl.colors.LinearSegmentedColormap.from_list(
-        "var_seq", ["#F2EEF5", "#C7A8D9", VAR_ACCENT, "#4A2566"], N=256
-    )
-
-    # ---- figure layout: banner (top) + two panels (bottom) ----
-    fig = plt.figure(figsize=(7.6, 4.8))
-    ax_left = fig.add_axes([0.055, 0.12, 0.42, 0.68])
-    ax_right = fig.add_axes([0.535, 0.12, 0.42, 0.68])
-
-    cm_l, norm_l = _draw_graph_panel(
-        ax_left, g, pos, pi, prop_cmap, 0.0, 1.0,
-        BIAS_ACCENT,
-        "treatment propensity — bias source",
-        r"$Z^* \rightarrow T,\; Z^* \rightarrow Y(t)$",
-    )
-    cm_r, norm_r = _draw_graph_panel(
-        ax_right, g, pos, sigma2, var_cmap, 0.0, 1.0,
-        VAR_ACCENT,
-        "outcome-noise variance — variance source",
-        r"$Z^* \rightarrow \sigma^2(Y)$",
-    )
-
-    # Thin colourbars under each panel.
-    _add_colourbar(fig, ax_left, prop_cmap, norm_l,
-                   r"$\pi_i = \Pr(T_i = 1 \mid Z^*_i)$")
-    _add_colourbar(fig, ax_right, var_cmap, norm_r,
-                   r"$\sigma^2_i = \mathrm{Var}(Y_i \mid Z^*_i)$")
-
-    draw_top_banner(fig)
-
-    fig.savefig(OUT_PDF, format="pdf")
-    fig.savefig(OUT_PNG, format="png", dpi=220)
-    plt.close(fig)
-    print(f"wrote {OUT_PDF.relative_to(OUT_DIR.parent)}")
-    print(f"wrote {OUT_PNG.relative_to(OUT_DIR.parent)}")
+    # Right channel arrow/label.
+    ax.annotate("", xy=(0.955, mid_y),
+                xytext=(pill_x + pill_w + 0.003, mid_y),
+                arrowprops=dict(arrowstyle="-|>", color=VAR_ACCENT,
+                                lw=1.3, shrinkA=2, shrinkB=2))
+    ax.text((pill_x + pill_w + 0.003 + 0.955) / 2, mid_y + 0.14,
+            "variance channel", ha="center", va="bottom",
+            fontsize=9.6, color=VAR_ACCENT, fontweight="bold")
 
 
 if __name__ == "__main__":
