@@ -69,7 +69,7 @@ Graph-based uplift modeling powers targeted recommendation on social networks, w
 \begin{figure}[t]
     \centering
     \includegraphics[width=0.95\linewidth]{images/Uplift_cover.pdf}
-    \caption{Network position $Z^*$ is a dual-root confounder. The same graph is coloured two ways: by treatment propensity (left, coral-to-teal) and by outcome-noise variance (right, light-to-purple). Both colourings track the same underlying structural position of each node, so the two panels co-vary --- which is exactly the claim of Proposition~\ref{prop:dualroot}: bias and variance share $Z^*$ as their cause, and $\mathrm{PEHE}^2 = \mathrm{bias}^2 + \mathrm{variance}$.}
+    \caption{PACT diagnoses and corrects the dual-root confounder. Network position $Z^*$ simultaneously (i)~confounds treatment assignment ($Z^* \to T,\, Y(t)$) and (ii)~drives outcome-noise heteroscedasticity ($Z^* \to \sigma^2(Y)$), so the PEHE of any graph ITE estimator decomposes as $\mathrm{PEHE}^2 = \mathrm{bias}^2 + \mathrm{variance}$ (Proposition~\ref{prop:dualroot}). \textbf{GPE} cuts the bias pathway by fusing a node2vec proxy for $Z^*$ into the base model's input via cross-attention; \textbf{Variance-Weighted Loss} reweights the pseudo-outcome regression by inverse estimated noise $1/\hat\sigma^2_t$. Both plug-ins attach to any base model $M$ (BNN, TARNet, NetDeconf, GIAL, GNUM, GDC, X-learner; Table~\ref{tab:main}) without modifying its internal architecture.}
     \label{fig:cover}
 \end{figure}
 

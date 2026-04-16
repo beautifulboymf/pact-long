@@ -181,12 +181,6 @@ def draw_zone_b(ax):
             ha="center", va="center",
             fontsize=18, color=TEXT_DARK, fontweight="bold", zorder=5)
 
-    # Decomposition caption below the boxes
-    ax.text(50.0, 82.0,
-            r"dual-root decomposition of $\mathrm{PEHE}^2$  (Prop. 1)",
-            ha="center", va="center",
-            fontsize=8.2, style="italic", color=TEXT_GREY, zorder=5)
-
 
 # ===================================================================
 # ZONE C — two plug-in cards with micro-visualizations
@@ -298,12 +292,6 @@ def draw_zone_c(ax):
             ha="center", va="center",
             fontsize=7.0, style="italic", color=VAR_ACCENT, zorder=5)
 
-    # Footer — single tight line, small font to fit under both cards.
-    ax.text(50.0, 3.2,
-            r"attach to any base model $M$  "
-            r"(BNN, TARNet, NetDeconf, GIAL, GNUM, GDC, X-learner)",
-            ha="center", va="center",
-            fontsize=5.8, color=TEXT_GREY, style="italic", zorder=5)
 
 
 def _mini_box(ax, x, y, w, h, label, colour, *, dashed=False, text_size=7.5):
@@ -321,10 +309,10 @@ def _mini_box(ax, x, y, w, h, label, colour, *, dashed=False, text_size=7.5):
 
 
 def main():
-    fig = plt.figure(figsize=(3.45, 5.7))
+    fig = plt.figure(figsize=(3.45, 5.45))
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, 100)
-    ax.set_ylim(0, 155)
+    ax.set_ylim(6, 155)
     ax.axis("off")
 
     ax.text(50.0, 151.0,
