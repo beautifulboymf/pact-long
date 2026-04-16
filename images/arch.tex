@@ -1,126 +1,148 @@
-% Figure 2 — PACT framework pipeline with inline theory callouts.
+% Figure 2 — PACT architecture / training pipeline, v6.
 % Render via \input{images/arch.tex} inside a figure* environment.
 % Requires (in main.tex preamble):
 %   \usepackage{tikz}
 %   \usetikzlibrary{arrows.meta, fit, positioning, calc, backgrounds}
-%   \definecolor{pactaccent}{HTML}{2A8A8A}   % teal  — bias-channel
-%   \definecolor{varaccent}{HTML}{8A4FAD}    % purple — variance-channel
+%   \definecolor{pactaccent}{HTML}{2A8A8A}   % teal  — bias channel (GPE)
+%   \definecolor{varaccent}{HTML}{8A4FAD}    % purple — variance channel (VWL)
 \begin{tikzpicture}[
+    % ============== blocks ==============
     every node/.style={font=\small},
-    %% generic pipeline blocks
+    %% small, neutral pipeline blocks (data / base model)
     blk/.style={
+        draw, rounded corners=3pt, align=center,
+        minimum width=1.9cm, minimum height=1.05cm,
+        inner xsep=4pt, inner ysep=3pt,
+        line width=0.6pt, draw=black!55, fill=black!3,
+    },
+    %% the base-model block is slightly wider and taller — it's the anchor
+    modelblk/.style={
+        blk, minimum width=2.3cm, minimum height=1.25cm,
+        line width=0.8pt, fill=black!5,
+    },
+    %% GPE plug-in (teal) — prominent, designed to visually stand out
+    gpeblk/.style={
+        draw, rounded corners=3pt, align=center,
+        minimum width=2.55cm, minimum height=1.55cm,
+        inner xsep=5pt, inner ysep=4pt,
+        line width=1.0pt,
+        draw=pactaccent, fill=pactaccent!10,
+    },
+    %% VWL plug-in (purple) — same prominence as GPE
+    vwlblk/.style={
+        draw, rounded corners=3pt, align=center,
+        minimum width=3.3cm, minimum height=1.55cm,
+        inner xsep=5pt, inner ysep=4pt,
+        line width=1.0pt,
+        draw=varaccent, fill=varaccent!10,
+    },
+    %% sub-block for the log-sigma^2 head / pilot (smaller, lighter)
+    subblk/.style={
         draw, rounded corners=2pt, align=center,
-        minimum width=1.85cm, minimum height=0.95cm,
-        inner sep=3pt, line width=0.55pt, draw=black!55, fill=black!2,
+        minimum width=2.2cm, minimum height=0.75cm,
+        inner xsep=3pt, inner ysep=2pt,
+        line width=0.55pt,
+        draw=varaccent!70, fill=varaccent!5,
+        font=\scriptsize,
     },
-    biasblk/.style={
-        blk, draw=pactaccent!85, fill=pactaccent!12, line width=0.85pt,
+    detachblk/.style={
+        draw, rounded corners=2pt, align=center,
+        minimum width=2.2cm, minimum height=0.75cm,
+        inner xsep=3pt, inner ysep=2pt,
+        line width=0.55pt, densely dashed,
+        draw=black!45, fill=black!2,
+        font=\scriptsize,
     },
-    varblk/.style={
-        blk, draw=varaccent!85, fill=varaccent!10, line width=0.85pt,
+    %% tags (plug-in badges above GPE / VWL)
+    pactbadge/.style={
+        rounded corners=2pt, inner xsep=4pt, inner ysep=1.5pt,
+        line width=0.6pt, fill=white,
+        font=\scriptsize\bfseries,
+    },
+    %% text labels
+    sublbl/.style={
+        font=\scriptsize\itshape, text=black!55, align=center,
+    },
+    phase/.style={
+        font=\scriptsize\bfseries, text=black!60,
     },
     %% arrows
-    pipe/.style={-Stealth, line width=0.55pt, draw=black!70},
-    biaspipe/.style={-Stealth, line width=0.75pt, draw=pactaccent},
-    varpipe/.style={-Stealth, line width=0.75pt, draw=varaccent},
-    detach/.style={-Stealth, dashed, line width=0.7pt, draw=red!65!black},
-    %% callout bubbles
-    callout/.style={
-        rounded corners=3pt, align=center, inner sep=5pt,
-        line width=0.7pt, text width=3.2cm,
-    },
-    biascall/.style={callout, draw=pactaccent!85, fill=pactaccent!6,
-        font=\scriptsize},
-    varcall/.style={callout, draw=varaccent!85, fill=varaccent!6,
-        font=\scriptsize},
-    %% leader lines from callout to plug-in
-    leader/.style={line width=0.6pt, densely dashed, draw=black!35},
-    %% latent node used inside callouts
-    tinyZ/.style={draw, circle, fill=black!4, minimum size=0.38cm,
-        inner sep=0pt, line width=0.5pt, font=\scriptsize},
-    tinybox/.style={draw, rounded corners=1pt, inner sep=1.2pt,
-        font=\scriptsize, line width=0.4pt, minimum height=0.3cm},
-    %% misc
-    plugin/.style={
-        font=\scriptsize\bfseries, inner sep=2pt, outer sep=0pt,
-        rounded corners=2pt, fill=white,
-    },
-    sublabel/.style={font=\scriptsize\itshape, text=black!55, align=center},
-    rhead/.style={font=\small\bfseries, text=black!78},
+    pipe/.style={-Stealth, line width=0.65pt, draw=black!70},
+    biaspipe/.style={-Stealth, line width=0.85pt, draw=pactaccent},
+    varpipe/.style={-Stealth, line width=0.85pt, draw=varaccent},
+    detach/.style={-Stealth, dashed, line width=0.75pt, draw=red!65!black},
+    node distance=0.65cm,
 ]
 
-% ===================================================================
-%   BOTTOM ROW — linear training pipeline
-% ===================================================================
-\node[blk] (input) at (0, 0) {$X,\,\mathcal{G}$};
+% ============================== MAIN PIPELINE ==============================
+% Input
+\node[blk] (input) {$X,\;\mathcal{G}$};
 
-\node[biasblk, right=0.55cm of input] (gpe)
-    {\textbf{GPE}\\[1pt]{\scriptsize$X \oplus p(Z^*)$}\\[-1pt]{\scriptsize node2vec $+$ cross-attn}};
+% GPE plug-in — first contribution, input level
+\node[gpeblk, right=of input] (gpe) {%
+    \textbf{\textcolor{pactaccent}{GPE}}\\[2pt]
+    {\small$X \oplus p(Z^*)$}\\[-1pt]
+    {\scriptsize node2vec $+$ cross-attn}
+};
 
-\node[blk, right=0.55cm of gpe, minimum width=2.2cm] (M)
-    {base model $M$};
+% Base model
+\node[modelblk, right=of gpe] (M) {%
+    \textbf{base model}\\
+    $M$
+};
+\node[sublbl, below=0.1cm of M, text width=2.5cm] (bblist)
+    {BNN, TARNet, NetDeconf,\\GIAL, GNUM, GDC, X-learner};
 
-\node[blk, right=0.55cm of M] (mu) {$\hat\mu_0,\,\hat\mu_1$};
+% Outcome heads
+\node[blk, right=of M] (mu) {$\hat\mu_0,\,\hat\mu_1$};
 
-\node[blk, right=0.55cm of mu, minimum width=2.2cm] (pseudo)
-    {$D = Y - \hat\mu_{1-t}$};
+% Pseudo-outcome
+\node[blk, right=of mu, minimum width=2.2cm] (pseudo)
+    {$D\;=\;Y - \hat\mu_{1-t}$};
 
-\node[varblk, right=0.55cm of pseudo, minimum width=2.8cm] (loss)
-    {\textbf{Variance-Weighted Loss}\\[1pt]{\scriptsize$\sum_i w_i(D_i - \hat\tau)^2$}\\[-1pt]
-     {\scriptsize$w_i = 1/\max\{\hat\sigma^2_t,\delta\}$}};
+% VWL plug-in — second contribution, loss level
+\node[vwlblk, right=of pseudo] (loss) {%
+    \textbf{\textcolor{varaccent}{Variance-Weighted Loss}}\\[2pt]
+    {\small$\sum_i w_i\,(D_i - \hat\tau)^2$}\\[-1pt]
+    {\scriptsize$w_i = 1/\max\{\hat\sigma^2_t, \delta\}$}
+};
 
-% Pipeline edges.
+% ---------- arrows along the main pipeline ----------
 \draw[biaspipe] (input) -- (gpe);
 \draw[pipe]     (gpe)   -- (M);
 \draw[pipe]     (M)     -- (mu);
 \draw[pipe]     (mu)    -- (pseudo);
-\draw[pipe]     (pseudo) -- (loss);
+\draw[varpipe]  (pseudo) -- (loss);
 
-% Backbone list and variance-head callout below the pipeline.
-\node[sublabel, below=0.08cm of M, text width=2.6cm]
-    {BNN, TARNet, NetDeconf,\\GIAL, GNUM, GDC, X-learner};
+% ============================== SIGMA HEAD & PILOT ==============================
+\node[subblk, below=0.8cm of loss]  (sh)    {$\log\hat\sigma^2_t$ head};
+\node[detachblk, below=0.35cm of sh] (pilot) {pilot $\hat\tau$ (detached)};
 
-\node[varblk, below=0.6cm of loss, minimum width=2.2cm, minimum height=0.6cm]
-    (sh) {{\scriptsize$\log\hat\sigma^2_t$ head}};
-\node[blk, dashed, draw=black!40, left=0.5cm of sh,
-      minimum width=2.1cm, minimum height=0.6cm] (pilot)
-    {{\scriptsize pilot $\hat\tau$ (detached)}};
-\draw[detach]  (pilot.east) -- (sh.west);
-\draw[varpipe] (sh.north) -- (sh.north |- loss.south);
+% pilot -> head -> loss (weight flow)
+\draw[detach]  (pilot.north) -- (sh.south);
+\draw[varpipe] (sh.north) -- (loss.south);
 
-% ===================================================================
-%   TOP ROW — inline theory callouts, one per plug-in
-% ===================================================================
-\node[biascall, above=2.4cm of gpe, anchor=south] (biascall) {%
-    \begin{tikzpicture}[baseline=(z.base)]
-        \node[tinyZ] (z) {$Z^*$};
-        \node[tinybox, right=0.18cm of z] (t) {$T$};
-        \node[tinybox, below=0.02cm of t] (y) {$Y(t)$};
-        \draw[biaspipe, line width=0.5pt] (z) -- (t);
-        \draw[biaspipe, line width=0.5pt] (z) -- (y);
-    \end{tikzpicture}\\[2pt]
-    \textcolor{pactaccent}{\textbf{attacks bias$^2$}} — Prop.~\ref{prop:dualroot}(a)\\
-    \textcolor{pactaccent}{\footnotesize\textbf{[ PACT plug-in ]}}%
-};
+% ============================== PLUG-IN BADGES ==============================
+\node[pactbadge, draw=pactaccent, text=pactaccent,
+      above=0.15cm of gpe] {PACT plug-in};
+\node[pactbadge, draw=varaccent, text=varaccent,
+      above=0.15cm of loss] {PACT plug-in};
 
-\node[varcall, above=2.4cm of loss, anchor=south] (varcall) {%
-    \begin{tikzpicture}[baseline=(z.base)]
-        \node[tinyZ] (z) {$Z^*$};
-        \node[tinybox, right=0.18cm of z] (s) {$\sigma^2(Y)$};
-        \draw[varpipe, line width=0.5pt] (z) -- (s);
-    \end{tikzpicture}\\[2pt]
-    \textcolor{varaccent}{\textbf{attacks variance}} — Prop.~\ref{prop:dualroot}(b)\\
-    \textcolor{varaccent}{\footnotesize\textbf{[ PACT plug-in ]}}%
-};
+% ============================== PHASE LABELS (optional subtle) ==============================
+% Small left-margin labels indicating forward/backward roles.
+\node[phase, anchor=west] at ($(input.west)+(-1.35,0.3)$) {forward pass};
+\node[phase, anchor=west] at ($(input.west)+(-1.35,-0.3)$) {$\longrightarrow$};
 
-% Leader lines from each callout to its plug-in.
-\draw[leader, draw=pactaccent!70] (biascall.south) -- (gpe.north);
-\draw[leader, draw=varaccent!80]  (varcall.south)  -- (loss.north);
-
-% Strip label on the left — small, out of the flow.
-\node[rhead, text=pactaccent, align=left, font=\scriptsize\bfseries]
-    at ($(biascall.west)+(-1.6,0.0)$) {Theory \\ callouts:};
-\node[rhead, align=left, font=\scriptsize\bfseries]
-    at ($(input.west)+(-1.5,0.0)$) {Training \\ pipeline:};
+% ============================== BACKGROUND BANDS ==============================
+% Very subtle coloured bands behind GPE and VWL to emphasize where the
+% plug-ins sit. Low opacity so they do not compete.
+\begin{pgfonlayer}{background}
+    \node[fill=pactaccent!5, rounded corners=6pt,
+          fit=(gpe) (bblist), inner xsep=4pt, inner ysep=6pt,
+          draw=pactaccent!15, line width=0.4pt] {};
+    \node[fill=varaccent!5, rounded corners=6pt,
+          fit=(loss) (pilot), inner xsep=4pt, inner ysep=6pt,
+          draw=varaccent!18, line width=0.4pt] {};
+\end{pgfonlayer}
 
 \end{tikzpicture}
