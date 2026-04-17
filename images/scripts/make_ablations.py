@@ -76,8 +76,8 @@ GDC_BEST_COL = GDC_MEAN[:, 1:].argmin(axis=1) + 1   # skip plain GDC column
 # Right panel — tabular Qini (up)
 # =====================================================================
 TAB_LABELS = [
-    "Hill-\nspend",
-    "Hill-\nvisit",
+    "Hill-spend",
+    "Hill-visit",
     "X5",
     "Criteo",
     "Lenta",
@@ -112,36 +112,31 @@ def draw_left(ax):
             fmt="none", ecolor="#333333", elinewidth=0.55,
             capsize=1.4, capthick=0.55, zorder=4,
         )
-        # value labels above each bar
-        for xi, m, s in zip(x + off, means, stds):
-            ax.text(xi, m + s + 0.12, f"{m:.2f}",
-                    ha="center", va="bottom",
-                    fontsize=5.8, color=TEXT_DARK, zorder=5)
         # star the best condition in each dataset row (skipping plain GDC)
         for row_i, best_c in enumerate(GDC_BEST_COL):
             if c == best_c:
                 ax.text(row_i + offsets[c],
-                        GDC_MEAN[row_i, c] + GDC_STD[row_i, c] + 0.50,
+                        GDC_MEAN[row_i, c] + GDC_STD[row_i, c] + 0.18,
                         "$\\star$",
                         ha="center", va="bottom",
-                        fontsize=7.2, color=BOTH_ACCENT, zorder=6)
+                        fontsize=6.0, color=BOTH_ACCENT, zorder=6)
 
     ax.set_xticks(x)
-    ax.set_xticklabels(GDC_DATASETS, fontsize=7.5)
-    ax.set_ylabel("PEHE\u2009($\\downarrow$)", fontsize=8)
-    ax.set_title("GDC ablation at $\\rho{=}30$",
-                 fontsize=8.5, fontweight="bold", color=TEXT_DARK, pad=4)
-    ax.tick_params(axis="y", labelsize=6.8)
-    ax.set_ylim(0, max(GDC_MEAN.max() + GDC_STD.max() + 1.4, 7))
+    ax.set_xticklabels(GDC_DATASETS, fontsize=5.8)
+    ax.set_ylabel("PEHE\u2009($\\downarrow$)", fontsize=6.4)
+    ax.set_title("GDC ablation, $\\rho{=}30$",
+                 fontsize=6.8, fontweight="bold", color=TEXT_DARK, pad=2)
+    ax.tick_params(axis="y", labelsize=5.6)
+    ax.set_ylim(0, max(GDC_MEAN.max() + GDC_STD.max() + 0.8, 6.5))
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.grid(axis="y", linestyle=":", linewidth=0.35, color="#B5B5B5", zorder=1)
+    ax.grid(axis="y", linestyle=":", linewidth=0.3, color="#B5B5B5", zorder=1)
     ax.set_axisbelow(True)
 
     ax.legend(
-        fontsize=6.8, loc="upper right", frameon=False,
-        handlelength=1.3, handletextpad=0.4, columnspacing=0.7,
-        ncol=2, borderaxespad=0.3,
+        fontsize=5.2, loc="upper right", frameon=False,
+        handlelength=0.8, handletextpad=0.25, columnspacing=0.5,
+        ncol=2, borderaxespad=0.2,
     )
 
 
@@ -169,60 +164,46 @@ def draw_right(ax):
         capsize=1.4, capthick=0.55, zorder=4,
     )
 
-    # Value labels. Only show labels on large-Δ cases or "winning" bars to
-    # avoid overcrowding; skip all near-zero pairs where S and S+Var agree.
-    def _label(xi, v, s_):
-        y = v + s_ + 0.014 if v >= 0 else v - s_ - 0.020
-        va = "bottom" if v >= 0 else "top"
-        ax.text(xi, y, f"{v:.3f}",
-                ha="center", va=va, fontsize=5.6, color=TEXT_DARK)
-
-    # indices we care about labelling: Hillstrom-spend (0), Criteo (3)
-    LABEL_IDX = [0, 3]
-    for i in LABEL_IDX:
-        _label(x[i] - bar_w / 2, TAB_S[i], TAB_S_STD[i])
-        _label(x[i] + bar_w / 2, TAB_SVAR[i], TAB_SVAR_STD[i])
-
-    # Highlight the Hillstrom-spend 4x jump with a ★ + small annotation
-    # Hillstrom-spend is index 0.
+    # Highlight the Hillstrom-spend 4x jump with a small annotation
     ax.text(
-        x[0] + bar_w / 2, TAB_SVAR[0] + TAB_SVAR_STD[0] + 0.03,
+        x[0] + bar_w / 2, TAB_SVAR[0] + TAB_SVAR_STD[0] + 0.02,
         "$4\\times$",
         ha="center", va="bottom",
-        fontsize=7.5, color=BIAS_ACCENT, fontweight="bold",
+        fontsize=6.0, color=BIAS_ACCENT, fontweight="bold",
     )
 
     ax.set_xticks(x)
-    ax.set_xticklabels(TAB_LABELS, fontsize=6.8, linespacing=0.9)
-    ax.set_ylabel("Qini\u2009($\\uparrow$)", fontsize=8)
-    ax.set_title("Tabular Qini: variance weighting effect",
-                 fontsize=8.5, fontweight="bold", color=TEXT_DARK, pad=4)
-    ax.tick_params(axis="y", labelsize=6.8)
+    ax.set_xticklabels(TAB_LABELS, fontsize=5.2, rotation=35, ha="right",
+                       rotation_mode="anchor")
+    ax.set_ylabel("Qini\u2009($\\uparrow$)", fontsize=6.4)
+    ax.set_title("Tabular Qini",
+                 fontsize=6.8, fontweight="bold", color=TEXT_DARK, pad=2)
+    ax.tick_params(axis="y", labelsize=5.6)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.axhline(0, color="#777777", linewidth=0.5, zorder=2)
-    ax.grid(axis="y", linestyle=":", linewidth=0.35, color="#B5B5B5", zorder=1)
+    ax.axhline(0, color="#777777", linewidth=0.4, zorder=2)
+    ax.grid(axis="y", linestyle=":", linewidth=0.3, color="#B5B5B5", zorder=1)
     ax.set_axisbelow(True)
 
     # y-range with breathing room for the 4x label
     all_means = np.concatenate([TAB_S, TAB_SVAR])
-    top = max(all_means) + 0.12
-    bot = min(all_means) - 0.05
+    top = max(all_means) + 0.09
+    bot = min(all_means) - 0.04
     ax.set_ylim(bot, top)
 
     ax.legend(
-        fontsize=6.8, loc="upper right", frameon=False,
-        handlelength=1.3, handletextpad=0.4,
-        borderaxespad=0.3,
+        fontsize=5.2, loc="upper right", frameon=False,
+        handlelength=0.8, handletextpad=0.25,
+        borderaxespad=0.2,
     )
 
 
 def main():
-    # Single-column layout: stack panels vertically. ACM sigconf single
-    # column width ≈ 3.35 in; two panels side-by-side would be too narrow.
+    # Single-column width (≈ 3.35 in), panels side-by-side in a flat aspect
+    # so the figure only occupies ~half the page vertically.
     fig, (ax_L, ax_R) = plt.subplots(
-        2, 1, figsize=(3.35, 4.0), facecolor="white",
-        gridspec_kw=dict(hspace=0.55),
+        1, 2, figsize=(3.35, 2.0), facecolor="white",
+        gridspec_kw=dict(wspace=0.45),
     )
     draw_left(ax_L)
     draw_right(ax_R)
