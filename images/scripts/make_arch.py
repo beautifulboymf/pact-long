@@ -242,15 +242,15 @@ def x_cut(ax, cx, cy, *, size=1.0, colour=CUT_RED, lw=1.7, zorder=9):
 
 
 # ---------------- scene geometry ----------------
-FORWARD_Y = 38
-BACKWARD_Y = 14
-DIVIDER_Y = 26
+FORWARD_Y = 32
+BACKWARD_Y = 13
+DIVIDER_Y = 23
 
 SW = 8.0   # scaffold width
 SH = 10.0  # scaffold height
 BPAD = 0.2  # FancyBboxPatch pad — visible border sits at ±BPAD outside (x,w)
-PH = 17.0      # GPE plug-in height (forward)
-PH_VWL = 19.0  # VWL plug-in height (trimmed — removes the wasted top band)
+PH = 14.0      # GPE plug-in height  (trimmed for flatter aspect)
+PH_VWL = 16.0  # VWL plug-in height (trimmed for flatter aspect)
 
 GW = 26.0  # GPE width
 VW = 38.0  # VWL width — narrowed; now mirrors forward row's new shorter span
@@ -265,9 +265,9 @@ X_D    = 70.0
 # forward-row D center ≡ 74.0 — used to align VWL's internal (D−τ̂) input
 
 # stacked-input geometry: X above, p(Z*) below, each half-height
-SH_STACK = 8.0                         # smaller scaffold height for stack
-Y_X_STACK = 38.0 + SH_STACK / 2 + 0.5  # = 42.5 (X centre)
-Y_P_STACK = 38.0 - SH_STACK / 2 - 0.5  # = 33.5 (p centre)
+SH_STACK = 6.0                         # smaller scaffold height for stack
+Y_X_STACK = 32.0 + SH_STACK / 2 + 0.5  # = 35.5 (X centre)
+Y_P_STACK = 32.0 - SH_STACK / 2 - 0.5  # = 28.5 (p centre)
 
 # backward-row block x-origins (content: 10 → 78 — matches forward)
 X_PILOT = 10.0
@@ -469,10 +469,10 @@ def plugin_vwl(ax, x, y):
     # so the computation chain reads inline.
     # =========================================================================
 
-    y_row   = 13.0
-    label_y = 8.0
-    lx, ly  = 46.0, 20.5   # 𝓛 at top-LEFT (block now starts at x=40)
-    title_y = 22.0
+    y_row   = 12.0
+    label_y = 7.5
+    lx, ly  = 46.0, 18.5   # 𝓛 at top-LEFT (block now spans y = 5 → 21)
+    title_y = 20.0
 
     wcx = 44.0                       # left graph column
     rcx = 74.0                       # right graph column (= new forward D centre)
@@ -592,7 +592,7 @@ def draw_sidebar(ax):
             ha="center", va="center",
             fontsize=10.5, fontweight="bold", color=VAR,
             rotation=90, rotation_mode="anchor")
-    ax.plot([6.6, 6.6], [4.3, 52.5], color=DIVIDER, lw=0.5, zorder=1)
+    ax.plot([6.6, 6.6], [4.5, 43.5], color=DIVIDER, lw=0.5, zorder=1)
 
 
 def draw_divider(ax):
@@ -604,7 +604,7 @@ def draw_legend(ax):
     """Top-of-figure key — at first glance, reviewer sees which blocks are
     PACT (ours) vs. the unchanged graph ITE backbone.  X-learner is not
     mentioned: it is off-the-shelf machinery, not our contribution."""
-    y = 51.0
+    y = 42.0
     # Coloured swatches = PACT (ours)
     ax.add_patch(mpatches.FancyBboxPatch(
         (10.5, y - 1.3), 3.0, 2.6,
@@ -721,10 +721,9 @@ def draw_backward(ax, hooks):
     # pseudo-outcome input directly.
     xD, yD, wD, _ = hooks["D_box"]
     dcx = xD + wD / 2           # forward D centre (= 82.0)
-    # D-τ̂ mini-graph is at y_row=13.0 with scale 1.30; top node centre sits
-    # at y ≈ 16.5 with radius ~0.32, so its top edge is ~16.85.  Land the
-    # arrow well above that so the head doesn't pierce the orange node.
-    d_tau_top_y = 17.3
+    # D-τ̂ mini-graph is at y_row=12.0 with scale 1.30; top node centre sits
+    # at y ≈ 15.5 with radius ~0.32.  Land the arrow just above that.
+    d_tau_top_y = 16.0
     ax.annotate(
         "",
         xy=(dcx, d_tau_top_y),
@@ -736,11 +735,11 @@ def draw_backward(ax, hooks):
         zorder=6,
     )
 
-    # Gradient arc: 𝓛 → M.  𝓛 lives at top-LEFT of VWL: (46, 20.5).
-    # Forward M centre is at x = 54 (with new layout) — arc goes up-right.
+    # Gradient arc: 𝓛 → M.  𝓛 lives at top-LEFT of VWL: (46, 18.5).
+    # Forward M centre is at x = 54 — arc goes up-right.
     xM, yM, wM, _ = hooks["M_box"]
     lcx = 46.0
-    lcy = 20.5                   # matches loss position inside plugin_vwl
+    lcy = 18.5                   # matches loss position inside plugin_vwl
     grad_src = (lcx + 0.5, lcy + 2.0)    # leave from top edge of 𝓛
     grad_dst = (xM + wM / 2, yM - 0.3)
     ax.annotate(
@@ -777,10 +776,10 @@ def main():
     # content so that `savefig.bbox="tight"` is not fighting a mostly
     # empty canvas.  Figsize aspect matches content aspect → no stretch,
     # no padding bands.
-    fig = plt.figure(figsize=(8.0, 5.15), facecolor=BG)
+    fig = plt.figure(figsize=(8.0, 4.05), facecolor=BG)
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(2.0, 78.8)   # covers sidebar text (x≈2.4) → rightmost block (x≈78.4)
-    ax.set_ylim(3.8, 53.0)   # covers VWL bottom (y≈4.3) → legend top (y≈52.3)
+    ax.set_ylim(4.5, 43.8)   # covers VWL bottom (y≈4.8) → legend top (y≈43.3)
     ax.axis("off")
     ax.set_facecolor(BG)
 
