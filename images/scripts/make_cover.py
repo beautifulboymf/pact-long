@@ -193,10 +193,10 @@ def draw_zone_b(ax):
 #  vertical whitespace.)
 # ===================================================================
 def draw_zone_c(ax):
-    # Cards shifted up so their top sits ~1 unit below the bias²/variance
-    # boxes (was 4 units, per user feedback on vertical whitespace).
+    # Cards shifted up so their top sits ~3 units below the bias²/variance
+    # boxes (was 4 units then 1 unit; 3 reads cleanest per user feedback).
     # `DY` is the global y-shift for all card-internal coords.
-    DY = 3
+    DY = 1
     CARD_Y = 30 + DY
     CARD_H = 54
 
@@ -321,12 +321,12 @@ def _mini_box(ax, x, y, w, h, label, colour, *, dashed=False, text_size=7.5):
 
 
 def main():
-    # ylim tightened: bottom 28→33 (cards shifted up by 3; +2 bottom margin trim),
+    # ylim tightened: bottom 28→31 (cards shifted up by 1; +2 bottom margin trim),
     # top 155→152 (title margin trim). figsize aspect retuned to match.
-    fig = plt.figure(figsize=(3.45, 4.27))
+    fig = plt.figure(figsize=(3.45, 4.35))
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, 100)
-    ax.set_ylim(33, 152)
+    ax.set_ylim(31, 152)
     ax.axis("off")
 
     ax.text(50.0, 149.5,
