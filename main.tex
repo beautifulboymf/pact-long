@@ -506,7 +506,7 @@ GIAL       & $3.29^{\pm.50}$ & $3.39^{\pm.60}$          & $6.27^{\pm1.11}$ & $6.
 Supplementary Table~\ref{tab:rho_ext} extends Table~\ref{tab:main} with two additional ρ values to densify the $10{\to}30$ transition referenced in \S\ref{sec:exp} and anchored by the ρ-regime explanation in \S\ref{sec:exp}'s Experimental Setup.
 
 \begin{table}[h]
-\caption{Rooted PEHE ($\downarrow$) at the two supplementary ρ values (ρ=15, ρ=20). Mean$^{\pm\text{std}}$ over 5 seeds. \textbf{Bold} = +GPE improves over vanilla. $^\star$GDC is the current SOTA~\cite{hu2025gdc}. [\emph{Table auto-populated from \texttt{runs/rho\_ext\_*/}; placeholders until runs complete.}]}
+\caption{Rooted PEHE ($\downarrow$) at the two supplementary ρ values (ρ=15, ρ=20). Mean$^{\pm\text{std}}$ over 5 seeds. \textbf{Bold} = +GPE improves over vanilla. $^\star$GDC is the current SOTA~\cite{hu2025gdc}. Across the 42 (model, dataset, $\rho$) cells, +GPE wins in 27 (64\%); BNN (the sole S-learner) never wins, and X-learner's own pseudo-outcome regression already exploits position indirectly, so GPE is largely neutral there at high noise.}
 \label{tab:rho_ext}
 \centering
 \footnotesize
@@ -517,23 +517,31 @@ Supplementary Table~\ref{tab:rho_ext} extends Table~\ref{tab:main} with two addi
 \cmidrule(lr){3-5} \cmidrule(lr){6-8}
 Model & & Cora & DBLP & PubMed & Cora & DBLP & PubMed \\
 \midrule
-TARNet       & vanilla & --- & --- & --- & --- & --- & --- \\
-             & +GPE    & --- & --- & --- & --- & --- & --- \\
-GDC$^\star$  & vanilla & --- & --- & --- & --- & --- & --- \\
-             & +GPE    & --- & --- & --- & --- & --- & --- \\
-NetDeconf    & vanilla & --- & --- & --- & --- & --- & --- \\
-             & +GPE    & --- & --- & --- & --- & --- & --- \\
-GIAL         & vanilla & --- & --- & --- & --- & --- & --- \\
-             & +GPE    & --- & --- & --- & --- & --- & --- \\
-GNUM         & vanilla & --- & --- & --- & --- & --- & --- \\
-             & +GPE    & --- & --- & --- & --- & --- & --- \\
-X-learner    & vanilla & --- & --- & --- & --- & --- & --- \\
-             & +GPE    & --- & --- & --- & --- & --- & --- \\
-BNN          & vanilla & --- & --- & --- & --- & --- & --- \\
-             & +GPE    & --- & --- & --- & --- & --- & --- \\
+\multirow{2}{*}{TARNet} & vanilla & $3.81^{\pm.44}$ & $3.62^{\pm.54}$ & $4.04^{\pm.62}$ & $4.28^{\pm.58}$ & $4.21^{\pm.37}$ & $3.88^{\pm.34}$ \\
+ & +GPE & $4.06^{\pm.86}$ & $\mathbf{3.00}^{\pm.32}$ & $\mathbf{3.63}^{\pm.31}$ & $4.45^{\pm.81}$ & $\mathbf{3.91}^{\pm.60}$ & $3.99^{\pm.48}$ \\
+\midrule
+\multirow{2}{*}{GDC$^\star$} & vanilla & $4.19^{\pm.11}$ & $3.41^{\pm.28}$ & $3.69^{\pm.47}$ & $4.36^{\pm.26}$ & $3.58^{\pm.23}$ & $4.02^{\pm.15}$ \\
+ & +GPE & $\mathbf{3.74}^{\pm.62}$ & $\mathbf{2.99}^{\pm.17}$ & $3.71^{\pm.73}$ & $\mathbf{3.84}^{\pm.22}$ & $\mathbf{3.15}^{\pm.21}$ & $\mathbf{3.17}^{\pm.20}$ \\
+\midrule
+\multirow{2}{*}{NetDeconf} & vanilla & $6.55^{\pm1.64}$ & $4.12^{\pm.21}$ & $4.00^{\pm.43}$ & $5.92^{\pm.62}$ & $4.26^{\pm.23}$ & $4.11^{\pm.43}$ \\
+ & +GPE & $\mathbf{5.09}^{\pm.80}$ & $\mathbf{3.97}^{\pm.13}$ & $\mathbf{3.67}^{\pm.55}$ & $\mathbf{4.74}^{\pm.30}$ & $\mathbf{4.02}^{\pm.15}$ & $\mathbf{4.02}^{\pm.64}$ \\
+\midrule
+\multirow{2}{*}{GIAL} & vanilla & $5.80^{\pm1.33}$ & $4.57^{\pm.53}$ & $3.83^{\pm.36}$ & $5.54^{\pm.64}$ & $4.35^{\pm.25}$ & $4.17^{\pm.17}$ \\
+ & +GPE & $\mathbf{5.29}^{\pm.62}$ & $\mathbf{4.01}^{\pm.25}$ & $\mathbf{3.32}^{\pm.08}$ & $\mathbf{4.97}^{\pm.29}$ & $\mathbf{4.01}^{\pm.35}$ & $\mathbf{3.61}^{\pm.56}$ \\
+\midrule
+\multirow{2}{*}{GNUM} & vanilla & $6.13^{\pm1.58}$ & $3.95^{\pm.06}$ & $4.29^{\pm.34}$ & $5.19^{\pm.73}$ & $4.24^{\pm.25}$ & $4.27^{\pm.42}$ \\
+ & +GPE & $\mathbf{4.80}^{\pm.48}$ & $\mathbf{3.94}^{\pm.10}$ & $\mathbf{3.94}^{\pm.16}$ & $\mathbf{4.76}^{\pm.40}$ & $\mathbf{4.02}^{\pm.05}$ & $\mathbf{4.11}^{\pm.08}$ \\
+\midrule
+\multirow{2}{*}{X-learner} & vanilla & $3.34^{\pm.11}$ & $2.96^{\pm.21}$ & $3.70^{\pm.46}$ & $4.14^{\pm.57}$ & $3.69^{\pm.27}$ & $3.51^{\pm.12}$ \\
+ & +GPE & $3.49^{\pm.41}$ & $2.97^{\pm.48}$ & $3.72^{\pm.19}$ & $\mathbf{3.64}^{\pm.40}$ & $3.70^{\pm.61}$ & $3.84^{\pm.13}$ \\
+\midrule
+\multirow{2}{*}{BNN} & vanilla & $5.33^{\pm.42}$ & $4.97^{\pm.09}$ & $5.44^{\pm.10}$ & $5.39^{\pm.40}$ & $4.97^{\pm.03}$ & $5.41^{\pm.16}$ \\
+ & +GPE & $5.46^{\pm.41}$ & $5.01^{\pm.10}$ & $5.48^{\pm.09}$ & $5.46^{\pm.42}$ & $5.02^{\pm.04}$ & $5.44^{\pm.10}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+The five-point curve $\rho\in\{5, 10, 15, 20, 30\}$ (main Table~\ref{tab:main} plus the supplementary rows above) shows the same qualitative pattern we highlighted in \S\ref{sec:var_exp}: GPE's PEHE gain narrows as $\rho$ grows, and the BNN S-learner never benefits (consistent with the single-head argument in \S\ref{sec:exp}). The $\rho=15, 20$ transition is where the dual-root complementarity of Proposition~\ref{prop:dualroot}(c) starts to bite---exactly the regime where \S\ref{sec:var_exp}'s $\rho{=}30$ ablation shows that GPE alone can be counterproductive and that combining GPE with variance weighting recovers the joint benefit.
 
 \subsection*{Robustness to community-detection algorithm}
 
