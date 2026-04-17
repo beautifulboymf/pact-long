@@ -76,12 +76,12 @@ GDC_BEST_COL = GDC_MEAN[:, 1:].argmin(axis=1) + 1   # skip plain GDC column
 # Right panel — tabular Qini (up)
 # =====================================================================
 TAB_LABELS = [
-    "Hillstrom\nspend",
-    "Hillstrom\nvisit",
+    "Hill-\nspend",
+    "Hill-\nvisit",
     "X5",
     "Criteo",
     "Lenta",
-    "Retail-\nHero$^\\dagger$",
+    "R-Hero$^\\dagger$",
 ]
 TAB_S       = np.array([0.029, -0.001, 0.013, 0.167, 0.001, 0.008])
 TAB_SVAR    = np.array([0.117, -0.005, 0.013, 0.151, 0.001, 0.009])
@@ -218,9 +218,11 @@ def draw_right(ax):
 
 
 def main():
+    # Single-column layout: stack panels vertically. ACM sigconf single
+    # column width ≈ 3.35 in; two panels side-by-side would be too narrow.
     fig, (ax_L, ax_R) = plt.subplots(
-        1, 2, figsize=(7.0, 2.35), facecolor="white",
-        gridspec_kw=dict(wspace=0.28),
+        2, 1, figsize=(3.35, 4.0), facecolor="white",
+        gridspec_kw=dict(hspace=0.55),
     )
     draw_left(ax_L)
     draw_right(ax_R)
