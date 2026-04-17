@@ -24,6 +24,22 @@
 \newtheorem{proposition}{Proposition}
 \newtheorem{remark}{Remark}
 
+% Tighten the vertical space around floats (figures / tables / algorithms)
+% and captions. acmart's defaults leave visible half-baseline gaps between
+% a float and the text above/below; the settings below halve that without
+% making anything touch.
+\setlength{\textfloatsep}{6pt plus 2pt minus 2pt}%  between floats and body text
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}%      between adjacent floats
+\setlength{\intextsep}{6pt plus 2pt minus 2pt}%     between inline floats and text
+\setlength{\dbltextfloatsep}{6pt plus 2pt minus 2pt}%  two-column floats
+\setlength{\dblfloatsep}{6pt plus 2pt minus 2pt}%
+\setlength{\abovecaptionskip}{3pt}%                 above table/figure caption
+\setlength{\belowcaptionskip}{1pt}%
+\setlength{\abovedisplayskip}{4pt plus 1pt minus 1pt}%  above \[ ... \]
+\setlength{\belowdisplayskip}{4pt plus 1pt minus 1pt}%
+\setlength{\abovedisplayshortskip}{2pt plus 1pt minus 1pt}%
+\setlength{\belowdisplayshortskip}{2pt plus 1pt minus 1pt}%
+
 \setcopyright{none}
 \copyrightyear{2025}
 \acmConference[RecSys '25]{19th ACM Conference on Recommender Systems}{October 6--10, 2025}{Seattle, WA, USA}
@@ -339,27 +355,17 @@ A natural question is \emph{how} GPE improves ITE estimation. We test three comp
 \section{Discussion}\label{sec:discuss}
 %% ====================================================================
 
-\subsection{Practical Guidelines for RecSys Practitioners}
+\subsection{Practical Guidelines}
 
-The dual-root perspective translates into concrete deployment heuristics.
-
-\textbf{When to use GPE.} GPE is most effective when the social graph has meaningful community structure (Louvain modularity $> 0.3$ is a reasonable threshold) or when treatment assignment correlates with network topology. Among the architectures tested, TARNet offers the best cost-to-benefit ratio: it is simple and lacks any built-in structural mechanism, leaving the most headroom for GPE. Crucially, GPE is a pure preprocessing step---it can be bolted onto any T-learner deployed in production \emph{without} retraining the backbone, which is a significant advantage over full architectural overhauls.
-
-\textbf{When to use variance weighting.} The learned $\log\sigma^2$ head earns its keep on continuous outcomes with genuine noise heterogeneity (revenue, dwell time, spend). For binary outcomes, the analytical Bernoulli variance $\sigma^2 = \mu(1-\mu)$ is a lightweight substitute that primarily regularizes training stability rather than shifting mean performance; do not expect it to move Qini on balanced datasets like Criteo.
-
-\textbf{When to combine both.} The dual-root analysis predicts that combining both modules is most valuable when \emph{both} network confounding and outcome noise are substantial---precisely the high-noise, community-structured settings common in social recommendation. Under such conditions, GPE alone risks overfitting to noisy pseudo-labels (a failure mode we observe empirically), while variance weighting alone cannot correct the structural confounding bias. Only the combination addresses both failure modes. The exact configuration (GPE only, Var only, or both) should be decided by the base architecture and noise regime: Figure~\ref{fig:ablations}~(left) shows that the optimal combination is dataset-dependent.
+The dual-root perspective translates into concrete deployment heuristics. Use \textbf{GPE} when the social graph has meaningful community structure (Louvain modularity $>0.3$) or treatment assignment correlates with network topology; TARNet offers the best cost-to-benefit ratio. Use \textbf{variance weighting} on continuous outcomes with genuine noise heterogeneity (revenue, dwell time, spend); for binary outcomes the analytical Bernoulli variance primarily stabilises training rather than shifting mean Qini, and should not be expected to move the needle on balanced datasets like Criteo. \textbf{Combine both} when network confounding and outcome noise are both substantial---GPE alone can overfit to noisy pseudo-labels, Var alone cannot correct structural bias, and the optimal configuration is dataset-dependent (Figure~\ref{fig:ablations}~left).
 
 \subsection{Design Choices and Robustness}
 
-\textbf{PE method.} On DBLP ($\rho{=}10$, 5~seeds), node2vec ($2.37^{\pm.10}$), Laplacian eigenvectors ($2.27^{\pm.16}$), and degree$+$PageRank ($2.37^{\pm.36}$) all improve over no-PE (PEHE $2.47$), confirming Proposition~\ref{prop:dualroot}(a): the positional signal matters more than the specific encoding method. Full results across PE variants are in the supplementary materials.
+\textbf{PE method and fusion.} On DBLP ($\rho{=}10$, 5 seeds) node2vec ($2.37^{\pm.10}$), Laplacian eigenvectors ($2.27^{\pm.16}$), and degree$+$PageRank ($2.37^{\pm.36}$) all improve over no-PE ($2.47$), confirming Proposition~\ref{prop:dualroot}(a)'s \emph{any-proxy} prediction. Concatenation-fusion achieves lower mean PEHE than cross-attention ($2.10$ vs.\ $2.32$) while cross-attention gives $4\times$ lower cross-seed variance; we recommend concatenation at scale for its $O(n)$ cost and cross-attention when training stability is the priority.
 
-\textbf{Concatenation vs.\ cross-attention.} Concatenation achieves slightly lower mean PEHE ($2.10$ vs.\ $2.32$, Section~\ref{sec:mechanism}), while cross-attention reduces cross-seed variance by $4{\times}$. We recommend concatenation at scale for its $O(n)$ complexity; cross-attention is preferred when training stability is the priority.
+\textbf{Relationship to graph transformers.} Replacing GAT with a sparse Graphormer-style transformer (learned degree centrality) on TARNet/DBLP: the position-aware backbone alone ($1.95^{\pm.13}$) already beats GAT ($2.43^{\pm.24}$). GPE substantially improves GAT ($2.43\to2.20$, $-9\%$) but \emph{does not} improve the position-aware backbone ($1.95\to2.06$)---any proxy for $Z^*$ helps, whether injected externally or learned internally, and once position is native the GPE signal is redundant. A no-community DGP ablation ($\kappa_4{=}0$) shows GPE still helps in 4/6 settings without explicit community structure, indicating node2vec captures structural roles beyond community membership.
 
-\textbf{Relationship to graph transformers.} To test whether GPE adds value when the backbone already encodes position, we replaced the GAT backbone with a sparse Graphormer-style transformer (learned degree centrality encoding) and evaluated TARNet on DBLP ($\rho{=}10$, 5~seeds). The position-aware backbone alone ($1.95^{\pm.13}$) outperforms GAT ($2.43^{\pm.24}$), confirming that native positional encoding improves causal estimation. GPE substantially improves GAT ($2.43 \to 2.20$, $-9\%$) but \emph{does not} improve the position-aware backbone ($1.95 \to 2.06$). GPE's value is specific to position-unaware GNN architectures; when the backbone already captures position natively, GPE's signal is redundant. This result independently validates our causal model: any proxy for $Z^*$ helps, whether injected externally (GPE) or learned internally (Graphormer-style attention).
-
-A no-community DGP ablation ($\kappa_4{=}0$, no edge boosting) shows GPE improves 4/6 settings even without explicit community structure, confirming that node2vec captures structural roles (hub vs.\ peripheral, bridge vs.\ cluster member) beyond community membership (see supplementary materials for full results).
-
-\textbf{Robustness to community-detection algorithm.} Because our DGP uses Louvain for the community-aware edge boost, a reviewer concern is that GPE's gain could be an artefact of Louvain's specific partition structure. Table~\ref{tab:comm_sens} reruns DBLP ($\rho{=}10$) with Leiden~\cite{traag2019leiden} and Infomap~\cite{rosvall2008infomap} in place of Louvain. $+$GPE wins in all six (model, algorithm) cells, and the $+$GPE gap actually widens under Leiden---consistent with Proposition~\ref{prop:dualroot}(a)'s prediction that GPE's value tracks how much position-driven bias remains in the backbone.
+\textbf{Robustness to community-detection algorithm.} Because the DGP's community-aware edge boost uses Louvain, we re-ran DBLP ($\rho{=}10$) with Leiden~\cite{traag2019leiden} and Infomap~\cite{rosvall2008infomap} in place of Louvain (Table~\ref{tab:comm_sens}). $+$GPE wins in all six (model, algorithm) cells and the gap widens under Leiden---GPE's value tracks how much position-driven bias remains in the backbone, not any property of the detection method.
 
 \begin{table}[t]
 \caption{Rooted PEHE ($\downarrow$) on DBLP $\rho{=}10$ under three community-detection algorithms used by the DGP. Mean$^{\pm\text{std}}$ over 5 seeds. \textbf{Bold} = $+$GPE improves over vanilla in that column.}
