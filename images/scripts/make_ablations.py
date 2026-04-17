@@ -22,12 +22,19 @@ OUT_PDF = OUT_DIR / "ablations.pdf"
 OUT_PNG = OUT_DIR / "ablations_preview.png"
 
 # --- palette matches make_cover.py / make_arch.py ---
+# The four GDC ablation bars need to be clearly distinguishable: we use
+# grey (baseline) / teal (+GPE) / purple (+Var) / warm-orange (+GPE+Var);
+# warm-orange pops as the "best combined" bar against the cool paper palette.
 BIAS_ACCENT = "#2A8A8A"       # teal   — +GPE
 VAR_ACCENT  = "#8A4FAD"       # purple — +Var
-BOTH_ACCENT = "#4A6E7A"       # blend  — +GPE+Var
-GREY        = "#7F7F7F"       # baseline
+BOTH_ACCENT = "#D9822B"       # warm orange — +GPE+Var (combined plug-ins)
+GREY        = "#B0B0B0"       # baseline bar — light enough to read
 TEXT_DARK   = "#1F1F1F"
 TEXT_GREY   = "#5A5A5A"
+ERR_BIAS    = "#175454"       # dark teal for error bars + outline
+ERR_VAR     = "#552E6D"       # dark purple
+ERR_BOTH    = "#8A4C10"       # dark orange
+ERR_GREY    = "#555555"       # dark grey
 
 mpl.rcParams.update(
     {
@@ -53,6 +60,7 @@ mpl.rcParams.update(
 GDC_DATASETS = ["CoraFull", "DBLP", "PubMed"]
 GDC_CONDS = ["GDC", "+GPE", "+Var", "+GPE+Var"]
 GDC_COLORS = [GREY, BIAS_ACCENT, VAR_ACCENT, BOTH_ACCENT]
+GDC_ERR    = [ERR_GREY, ERR_BIAS, ERR_VAR, ERR_BOTH]
 # rows: datasets, cols: conditions
 GDC_MEAN = np.array(
     [
@@ -99,18 +107,18 @@ def draw_left(ax):
     bar_w = 0.20
     offsets = (np.arange(n_cond) - (n_cond - 1) / 2) * bar_w
 
-    for c, (cond, colour, off) in enumerate(zip(GDC_CONDS, GDC_COLORS, offsets)):
+    for c, (cond, colour, err_colour, off) in enumerate(zip(GDC_CONDS, GDC_COLORS, GDC_ERR, offsets)):
         means = GDC_MEAN[:, c]
         stds  = GDC_STD[:, c]
         bars = ax.bar(
             x + off, means, width=bar_w * 0.92,
-            color=colour, edgecolor="none",
+            color=colour, edgecolor=err_colour, linewidth=0.35,
             label=cond, zorder=3,
         )
         ax.errorbar(
             x + off, means, yerr=stds,
-            fmt="none", ecolor="#333333", elinewidth=0.55,
-            capsize=1.4, capthick=0.55, zorder=4,
+            fmt="none", ecolor=err_colour, elinewidth=0.9,
+            capsize=1.8, capthick=0.9, zorder=4,
         )
         # star the best condition in each dataset row (skipping plain GDC)
         for row_i, best_c in enumerate(GDC_BEST_COL):
@@ -147,21 +155,23 @@ def draw_right(ax):
 
     ax.bar(
         x - bar_w / 2, TAB_S, width=bar_w,
-        color=GREY, edgecolor="none", label="S", zorder=3,
+        color=GREY, edgecolor=ERR_GREY, linewidth=0.35,
+        label="S", zorder=3,
     )
     ax.bar(
         x + bar_w / 2, TAB_SVAR, width=bar_w,
-        color=BIAS_ACCENT, edgecolor="none", label="S$+$Var", zorder=3,
+        color=BIAS_ACCENT, edgecolor=ERR_BIAS, linewidth=0.35,
+        label="S$+$Var", zorder=3,
     )
     ax.errorbar(
         x - bar_w / 2, TAB_S, yerr=TAB_S_STD,
-        fmt="none", ecolor="#333333", elinewidth=0.55,
-        capsize=1.4, capthick=0.55, zorder=4,
+        fmt="none", ecolor=ERR_GREY, elinewidth=0.9,
+        capsize=1.8, capthick=0.9, zorder=4,
     )
     ax.errorbar(
         x + bar_w / 2, TAB_SVAR, yerr=TAB_SVAR_STD,
-        fmt="none", ecolor="#333333", elinewidth=0.55,
-        capsize=1.4, capthick=0.55, zorder=4,
+        fmt="none", ecolor=ERR_BIAS, elinewidth=0.9,
+        capsize=1.8, capthick=0.9, zorder=4,
     )
 
     # Highlight the Hillstrom-spend 4x jump with a small annotation
@@ -202,7 +212,7 @@ def main():
     # Single-column width (≈ 3.35 in), panels side-by-side in a flat aspect
     # so the figure only occupies ~half the page vertically.
     fig, (ax_L, ax_R) = plt.subplots(
-        1, 2, figsize=(3.35, 2.0), facecolor="white",
+        1, 2, figsize=(3.35, 1.65), facecolor="white",
         gridspec_kw=dict(wspace=0.45),
     )
     draw_left(ax_L)
