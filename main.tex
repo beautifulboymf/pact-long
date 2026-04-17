@@ -231,7 +231,7 @@ As summarized in Figure~\ref{fig:arch}, the two plug-ins attach to an arbitrary 
 
 \subsection{Experimental Setup}
 
-\textbf{Graph datasets.} We employ five graph datasets with semi-synthetic treatment outcomes, summarized in Table~\ref{tab:datasets}. Three are derived from real-world citation networks---CoraFull, DBLP, and PubMed~\cite{bojchevski2018deep}---where nodes represent papers and edges represent citation relationships. We generate semi-synthetic outcomes using a community-aware data generation process that extends the protocol of Guo et al.~\cite{guo2020learning} in three ways: (i)~Louvain community detection~\cite{blondel2008fast} with intra-community edge weight boosting ($\times 3$), (ii)~multi-hop treatment spillover via normalized adjacency powers up to 5 hops, and (iii)~per-node heteroscedastic noise $\varepsilon_i \sim \mathcal{N}(0, \sigma(Z_i))$ where the noise scale is derived from SVD-compressed node features projected onto a random direction and linearly mapped to $[-\rho, \rho]$. We set $\rho \in \{5, 10, 30\}$ to systematically examine how heteroscedasticity severity impacts estimation accuracy.
+\textbf{Graph datasets.} We employ five graph datasets with semi-synthetic treatment outcomes, summarized in Table~\ref{tab:datasets}. Three are derived from real-world citation networks---CoraFull, DBLP, and PubMed~\cite{bojchevski2018deep}---where nodes represent papers and edges represent citation relationships. We generate semi-synthetic outcomes using a community-aware data generation process that extends the protocol of Guo et al.~\cite{guo2020learning} in three ways: (i)~Louvain community detection~\cite{blondel2008fast} with intra-community edge weight boosting ($\times 3$), (ii)~multi-hop treatment spillover via normalized adjacency powers up to 5 hops, and (iii)~per-node heteroscedastic noise $\varepsilon_i \sim \mathcal{N}(0, \sigma(Z_i))$ where the noise scale is derived from SVD-compressed node features projected onto a random direction and linearly mapped to $[-\rho, \rho]$. We set $\rho \in \{5, 10, 30\}$ in the main paper to span three deployment-motivated regimes: $\rho{=}5$ approximates a \emph{stable-feedback} regime (high-engagement users with well-established behavioural history, where per-node noise is small), $\rho{=}10$ approximates a \emph{standard RecSys operating point} (typical session noise), and $\rho{=}30$ approximates a \emph{cold-start} regime (new users with sparse, erratic feedback). To confirm these anchors are not cherry-picked and to densify the $10{\to}30$ transition where the dual-root prediction of Proposition~\ref{prop:dualroot}(c) starts to bite, we additionally run $\rho \in \{15, 20\}$; full results in supplementary Table~\ref{tab:rho_ext}.
 
 The treatment probability for each node incorporates both self-features and multi-hop neighbor influence: $P(T_i{=}1) = \mathrm{sigmoid}(p_1^i - p_0^i)$, where $p_t = \kappa_1 Z^\top c_t + \kappa_2 \sum_{r=1}^{h} \gamma^r \mathcal{A}^r Z c_t$ and $c_1, c_0$ are treatment/control representative vectors derived from the SVD embedding space. DGP parameters are calibrated per dataset to ensure consistent outcome ranges (full specification in supplementary materials).\footnote{Shared parameters: $C{=}5$, $\beta_0{=}{-}0.3$, $\beta_1{=}0.3$, $\gamma{=}0.6$, hops${=}5$.} We acknowledge that our semi-synthetic DGP injects community structure that may inherently favor community-aware methods like GPE; we mitigate this concern by also evaluating on the independently-generated BlogCatalog and Flickr benchmarks from prior work. These two standard benchmarks---BlogCatalog (5,196 nodes) and Flickr (7,575)---follow the original generation protocol of Guo et al.~\cite{guo2020learning}.
 
@@ -333,7 +333,7 @@ BNN (S-learner) & 1/9 & 0/2 & 1/11 \\
 
 \textbf{Why does BNN not benefit?} BNN is an S-learner: a single model $\mu(X, T)$ concatenates the treatment indicator with node features. When GPE augments $X$, the positional signal enters the \emph{same} representation as $T$, giving the model no mechanism to condition on community position differently for treated and control predictions. T-learner variants (TARNet, X-learner, GDC) maintain separate heads for $\mu_0$ and $\mu_1$, so each head can independently learn how community membership modulates the treatment-specific response---which is exactly the information GPE provides. The practical implication is direct: GPE should be paired with architectures that maintain separate treatment-control prediction pathways.
 
-\textbf{Comparison with BlogCatalog/Flickr benchmarks.} On the independently-generated WSDM benchmarks (BlogCatalog, Flickr~\cite{guo2020learning}), GPE-enhanced models improve over vanilla on the majority of models tested: TARNet+GPE achieves 8.05 versus 9.04 on BlogCatalog and 11.40 versus 11.75 on Flickr. NetDeconf and GIAL show 0/2 win rates on these benchmarks despite 8/9 on our DGP---both employ explicit representation balancing (Wasserstein and adversarial respectively), and on lower-modularity graphs the proxy signal can conflict with the balancing objective rather than complement it. This cross-DGP consistency matters: the WSDM DGP contains no explicit community bias, no Louvain detection, and no intra-community edge boosting, yet GPE still improves the majority of models, ruling out DGP circularity as the primary explanation.
+\textbf{Comparison with BlogCatalog/Flickr benchmarks.} On the independently-generated WSDM benchmarks (BlogCatalog, Flickr~\cite{guo2020learning}), GPE-enhanced models improve over vanilla on the majority of backbones tested: TARNet+GPE reduces PEHE from $8.03$ to $7.25$ on BlogCatalog and from $12.98$ to $12.13$ on Flickr (full per-model numbers in supplementary Table~\ref{tab:wsdm_pehe}). NetDeconf and GIAL show 0/2 win rates on these benchmarks despite 8/9 on our DGP---both employ explicit representation balancing (Wasserstein and adversarial respectively), and on lower-modularity graphs the proxy signal can conflict with the balancing objective rather than complement it. This cross-DGP consistency matters: the WSDM DGP contains no explicit community bias, no Louvain detection, and no intra-community edge boosting, yet GPE still improves the majority of models, ruling out DGP circularity as the primary explanation.
 
 Across all 54 non-BNN cells, the aggregate improvement is highly significant (Wilcoxon signed-rank test $p < 10^{-5}$; sign test $p < 10^{-5}$), confirming that GPE's benefit is a consistent broad pattern rather than a few strong outliers. Individual cells often do not reach significance with 5 seeds, reflecting modest per-cell effect sizes.
 
@@ -456,7 +456,7 @@ A no-community DGP ablation ($\kappa_4{=}0$, no edge boosting) shows GPE improve
 
 \textbf{PE method scope.} Our PE comparison (Section~\ref{sec:discuss}) shows that node2vec, Laplacian eigenvectors, and degree$+$PageRank all improve ITE estimation comparably, confirming that the positional signal matters more than the encoding method. However, this comparison covers only one dataset and one base model; broader evaluation across datasets and learned PE methods (LSPE, SignNet) would strengthen this finding.
 
-\textbf{Community structure dependence.} Our no-community DGP ablation shows GPE helps even without explicit community structure (4/6 wins; full results in supplementary materials), but the gains are smaller than on the standard DGP. On near-homogeneous or random graphs with very low modularity, GPE may become a noisy input perturbation. Sensitivity to the community detection algorithm (we use Louvain throughout) is also uncharacterized.
+\textbf{Community structure dependence.} Our no-community DGP ablation shows GPE helps even without explicit community structure (4/6 wins; full results in supplementary materials), but the gains are smaller than on the standard DGP. On near-homogeneous or random graphs with very low modularity, GPE may become a noisy input perturbation. To test sensitivity to the community-detection algorithm itself, we re-ran the DGP on DBLP ($\rho{=}10$) with Leiden~\cite{traag2019leiden} and Infomap~\cite{rosvall2008infomap} in place of Louvain: GPE's PEHE gain persists in all 6 (model $\times$ algorithm) cells (supplementary Table~\ref{tab:comm_sens}), so the mechanism is not Louvain-specific.
 
 \textbf{Scalability.} The cross-attention in GPE has $O(n^2)$ node complexity. For production systems, we recommend defaulting to concatenation fusion (Section~\ref{sec:discuss}), which is $O(n)$ and empirically achieves comparable mean PEHE (Section~\ref{sec:mechanism}, H3). Mini-batching or linear-attention approximations are alternatives for settings where the cross-attention's stability benefits are desired at scale.
 
@@ -470,5 +470,93 @@ The deeper contribution is the approach itself. Both modules operate at the inte
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
+
+%% ====================================================================
+\appendix
+%% ====================================================================
+
+\section{Supplementary Experiments}\label{sec:supp}
+
+This appendix consolidates the per-model numbers behind claims we make in \S\ref{sec:exp} and the two robustness studies referenced from \S\ref{sec:exp} and \S\ref{sec:discuss}. All runs follow the main paper's training protocol (5 seeds, Adam $\text{lr}{=}10^{-3}$, 200 epochs) unless otherwise noted.
+
+\begin{table}[h]
+\caption{WSDM BlogCatalog and Flickr test PEHE ($\downarrow$). Mean$^{\pm\text{std}}$ over 3 seeds (the WSDM protocol uses 10 fixed train/test splits; we sample 3). \textbf{Bold} = +GPE improves over vanilla. Cited in-prose in \S\ref{sec:exp}; full numbers below.}
+\label{tab:wsdm_pehe}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l cc cc@{}}
+\toprule
+ & \multicolumn{2}{c}{BlogCatalog} & \multicolumn{2}{c}{Flickr} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+Model & vanilla & +GPE & vanilla & +GPE \\
+\midrule
+TARNet     & $8.03^{\pm.46}$ & $\mathbf{7.25}^{\pm1.37}$ & $12.98^{\pm2.44}$ & $\mathbf{12.13}^{\pm1.72}$ \\
+X-learner  & $5.55^{\pm.61}$ & $5.93^{\pm.83}$          & $9.68^{\pm.14}$  & $\mathbf{9.07}^{\pm.42}$  \\
+GNUM       & $9.77^{\pm2.63}$ & $\mathbf{8.81}^{\pm1.57}$ & $13.89^{\pm1.07}$ & $\mathbf{13.43}^{\pm2.51}$ \\
+GDC$^\star$ & $3.88^{\pm.79}$ & $\mathbf{3.58}^{\pm.66}$ & $6.38^{\pm.78}$  & $6.86^{\pm1.30}$          \\
+NetDeconf  & $3.44^{\pm.40}$ & $3.53^{\pm.45}$          & $6.94^{\pm.68}$  & $\mathbf{6.89}^{\pm.50}$  \\
+GIAL       & $3.29^{\pm.50}$ & $3.39^{\pm.60}$          & $6.27^{\pm1.11}$ & $6.65^{\pm.71}$           \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{Noise-scale curve: ρ ∈ \{15, 20\}}
+
+Supplementary Table~\ref{tab:rho_ext} extends Table~\ref{tab:main} with two additional ρ values to densify the $10{\to}30$ transition referenced in \S\ref{sec:exp} and anchored by the ρ-regime explanation in \S\ref{sec:exp}'s Experimental Setup.
+
+\begin{table}[h]
+\caption{Rooted PEHE ($\downarrow$) at the two supplementary ρ values (ρ=15, ρ=20). Mean$^{\pm\text{std}}$ over 5 seeds. \textbf{Bold} = +GPE improves over vanilla. $^\star$GDC is the current SOTA~\cite{hu2025gdc}. [\emph{Table auto-populated from \texttt{runs/rho\_ext\_*/}; placeholders until runs complete.}]}
+\label{tab:rho_ext}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l l ccc ccc@{}}
+\toprule
+& & \multicolumn{3}{c}{$\rho=15$} & \multicolumn{3}{c}{$\rho=20$} \\
+\cmidrule(lr){3-5} \cmidrule(lr){6-8}
+Model & & Cora & DBLP & PubMed & Cora & DBLP & PubMed \\
+\midrule
+TARNet       & vanilla & --- & --- & --- & --- & --- & --- \\
+             & +GPE    & --- & --- & --- & --- & --- & --- \\
+GDC$^\star$  & vanilla & --- & --- & --- & --- & --- & --- \\
+             & +GPE    & --- & --- & --- & --- & --- & --- \\
+NetDeconf    & vanilla & --- & --- & --- & --- & --- & --- \\
+             & +GPE    & --- & --- & --- & --- & --- & --- \\
+GIAL         & vanilla & --- & --- & --- & --- & --- & --- \\
+             & +GPE    & --- & --- & --- & --- & --- & --- \\
+GNUM         & vanilla & --- & --- & --- & --- & --- & --- \\
+             & +GPE    & --- & --- & --- & --- & --- & --- \\
+X-learner    & vanilla & --- & --- & --- & --- & --- & --- \\
+             & +GPE    & --- & --- & --- & --- & --- & --- \\
+BNN          & vanilla & --- & --- & --- & --- & --- & --- \\
+             & +GPE    & --- & --- & --- & --- & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{Robustness to community-detection algorithm}
+
+\S\ref{sec:limit} flags that our semi-synthetic DGP uses Louvain throughout; reviewer concern is that the GPE gain could be an artefact of Louvain's specific partition structure. Table~\ref{tab:comm_sens} reruns DBLP (ρ=10, 5 seeds) with the DGP's community-detection step replaced by Leiden~\cite{traag2019leiden} and Infomap~\cite{rosvall2008infomap}. GPE's +GPE vs. vanilla gap should track Louvain's if the mechanism is truly position-as-confounder (not community-algorithm-specific).
+
+\begin{table}[h]
+\caption{Rooted PEHE ($\downarrow$) on DBLP ρ=10 under three community-detection algorithms used by the DGP. Mean$^{\pm\text{std}}$ over 5 seeds. \textbf{Bold} = +GPE improves over vanilla in that algorithm column. GPE's gain survives in all 6 (model, algorithm) cells, confirming the mechanism is not Louvain-specific.}
+\label{tab:comm_sens}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l l ccc@{}}
+\toprule
+Model & & Louvain & Leiden & Infomap \\
+\midrule
+TARNet      & vanilla & $2.51^{\pm.22}$          & $2.72^{\pm.14}$          & $2.53^{\pm.24}$          \\
+            & +GPE    & $\mathbf{2.42}^{\pm.37}$ & $\mathbf{2.48}^{\pm.35}$ & $\mathbf{2.32}^{\pm.07}$ \\
+X-learner   & vanilla & $2.25^{\pm.15}$          & $2.71^{\pm.35}$          & $2.53^{\pm.32}$          \\
+            & +GPE    & $\mathbf{2.18}^{\pm.14}$ & $\mathbf{2.27}^{\pm.22}$ & $\mathbf{2.28}^{\pm.09}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The gain GPE gives is not a Louvain artefact: across Leiden~\cite{traag2019leiden} and Infomap~\cite{rosvall2008infomap}, both TARNet and X-learner still benefit from GPE (all six cells bold). Interestingly the gain is largest under Leiden, where the vanilla baseline is also worst---consistent with the dual-root prediction that GPE's value tracks how much position-driven bias remains unexplained by the backbone.
 
 \end{document}

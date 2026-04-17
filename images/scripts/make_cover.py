@@ -154,7 +154,11 @@ def draw_zone_b(ax):
         facecolor=BIAS_ACCENT, alpha=0.14, zorder=3,
     )
     ax.add_patch(bias_box)
-    ax.text(23.0, 99.5, r"$\mathrm{bias}^2$",
+    # Use plain-text "bias" + Unicode superscript ² so the font matches
+    # the plain-text "variance" label in the adjacent box (both render
+    # in DejaVu Serif; the old $\mathrm{bias}^2$ fell back to mathtext
+    # Computer Modern, which looked inconsistent with "variance").
+    ax.text(23.0, 99.5, "bias\u00B2",
             ha="center", va="center",
             fontsize=13, fontweight="bold", color=BIAS_ACCENT, zorder=5)
     ax.text(23.0, 92.5, "(confounding)",
@@ -189,9 +193,11 @@ def draw_zone_b(ax):
 #  vertical whitespace.)
 # ===================================================================
 def draw_zone_c(ax):
-    # Cards shifted up +6 so their top sits close (4 units) below the
-    # bias^2/variance boxes.
-    CARD_Y = 30
+    # Cards shifted up so their top sits ~1 unit below the bias²/variance
+    # boxes (was 4 units, per user feedback on vertical whitespace).
+    # `DY` is the global y-shift for all card-internal coords.
+    DY = 3
+    CARD_Y = 30 + DY
     CARD_H = 54
 
     # =============== GPE card ===============
@@ -202,42 +208,44 @@ def draw_zone_c(ax):
         facecolor=BIAS_ACCENT, alpha=0.08, zorder=3,
     )
     ax.add_patch(gpe)
-    ax.text(25.5, 79.0, "GPE",
+    ax.text(25.5, 79.0 + DY, "GPE",
             ha="center", va="center",
             fontsize=11.5, fontweight="bold", color=BIAS_ACCENT, zorder=5)
 
     # Row 1: X  (+)  p(Z*)
-    _mini_box(ax, 7.0, 66.0, 11.0, 7.5, "$X$", BIAS_ACCENT, text_size=10)
-    ax.text(21.5, 69.75, "+", ha="center", va="center",
+    _mini_box(ax, 7.0, 66.0 + DY, 11.0, 7.5, "$X$", BIAS_ACCENT, text_size=10)
+    ax.text(21.5, 69.75 + DY, "+", ha="center", va="center",
             fontsize=13, color=BIAS_ACCENT, fontweight="bold", zorder=5)
-    _mini_box(ax, 25.0, 66.0, 19.0, 7.5, r"$p(Z^*)$",
+    _mini_box(ax, 25.0, 66.0 + DY, 19.0, 7.5, r"$p(Z^*)$",
               BIAS_ACCENT, dashed=True, text_size=10)
-    ax.text(34.5, 62.2, "node2vec",
+    ax.text(34.5, 62.2 + DY, "node2vec",
             ha="center", va="center",
             fontsize=6.2, style="italic", color=BIAS_ACCENT, zorder=5)
 
     # Compact down-arrow labelled in-line
-    ax.annotate("", xy=(25.5, 57.0), xytext=(25.5, 61.5),
+    ax.annotate("", xy=(25.5, 57.0 + DY), xytext=(25.5, 61.5 + DY),
                 arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT, lw=1.2,
                                 shrinkA=0, shrinkB=0),
                 zorder=5)
-    ax.text(29.0, 59.2, "cross-attn",
+    ax.text(29.0, 59.2 + DY, "cross-attn",
             ha="left", va="center",
             fontsize=6.4, style="italic", color=BIAS_ACCENT, zorder=5)
 
     # Row 2: fused input -> M
-    _mini_box(ax, 7.0, 49.0, 22.0, 7.5, "fused $X$", BIAS_ACCENT, text_size=9)
-    ax.annotate("", xy=(33.5, 52.75), xytext=(29.2, 52.75),
+    _mini_box(ax, 7.0, 49.0 + DY, 22.0, 7.5, "fused $X$", BIAS_ACCENT, text_size=9)
+    ax.annotate("", xy=(33.5, 52.75 + DY), xytext=(29.2, 52.75 + DY),
                 arrowprops=dict(arrowstyle="-|>", color=BIAS_ACCENT, lw=1.2,
                                 shrinkA=0, shrinkB=0),
                 zorder=5)
-    _mini_box(ax, 34.5, 49.0, 9.0, 7.5, "$M$", BIAS_ACCENT, text_size=10)
+    _mini_box(ax, 34.5, 49.0 + DY, 9.0, 7.5, "$M$", BIAS_ACCENT, text_size=10)
 
     # Takeaway lines
-    ax.text(25.5, 42.5, r"$\Rightarrow\;$ reduces $\mathrm{bias}^2$",
+    # Use mathtext $\Rightarrow$ for the arrow (matches the purple side),
+    # plain Unicode ² for the bias superscript (matches the variance font).
+    ax.text(25.5, 42.5 + DY, "$\\Rightarrow\\;$reduces bias\u00B2",
             ha="center", va="center",
             fontsize=9.5, fontweight="bold", color=BIAS_ACCENT, zorder=5)
-    ax.text(25.5, 37.5,
+    ax.text(25.5, 37.5 + DY,
             r"cuts $Z^*\!\to T,\, Y(t)$",
             ha="center", va="center",
             fontsize=7.0, style="italic", color=BIAS_ACCENT, zorder=5)
@@ -250,22 +258,22 @@ def draw_zone_c(ax):
         facecolor=VAR_ACCENT, alpha=0.08, zorder=3,
     )
     ax.add_patch(vwl)
-    ax.text(74.5, 80.0, "Variance-Weighted",
+    ax.text(74.5, 80.0 + DY, "Variance-Weighted",
             ha="center", va="center",
             fontsize=9.8, fontweight="bold", color=VAR_ACCENT, zorder=5)
-    ax.text(74.5, 75.8, "Loss",
+    ax.text(74.5, 75.8 + DY, "Loss",
             ha="center", va="center",
             fontsize=9.8, fontweight="bold", color=VAR_ACCENT, zorder=5)
 
     # Formula
-    ax.text(74.5, 68.5,
+    ax.text(74.5, 68.5 + DY,
             r"$\mathcal{L}\;=\;\sum_{i}\,w_i\,(D_i - \hat\tau)^2$",
             ha="center", va="center",
             fontsize=9.3, color=TEXT_DARK, zorder=5)
 
     # Bar chart
     bar_base_x = 58.0
-    bar_base_y = 52.0
+    bar_base_y = 52.0 + DY
     bar_labels = [r"low $\sigma^2$", "mid", r"high $\sigma^2$"]
     bar_heights = [10.0, 5.5, 2.3]
     bar_alphas = [0.90, 0.58, 0.28]
@@ -279,19 +287,19 @@ def draw_zone_c(ax):
         ax.text(x + 3.25, bar_base_y - 1.5, lbl,
                 ha="center", va="top",
                 fontsize=6.0, color=VAR_ACCENT, zorder=5)
-    ax.annotate("", xy=(87.8, 52.0), xytext=(87.8, 63.5),
+    ax.annotate("", xy=(87.8, 52.0 + DY), xytext=(87.8, 63.5 + DY),
                 arrowprops=dict(arrowstyle="<-", color=VAR_ACCENT, lw=0.8,
                                 shrinkA=0, shrinkB=0),
                 zorder=5)
-    ax.text(89.0, 57.5, r"$w_i$",
+    ax.text(89.0, 57.5 + DY, r"$w_i$",
             ha="left", va="center",
             fontsize=7.8, color=VAR_ACCENT, style="italic", zorder=5)
 
     # Takeaway lines
-    ax.text(74.5, 42.5, r"$\Rightarrow\;$ reduces variance",
+    ax.text(74.5, 42.5 + DY, r"$\Rightarrow\;$ reduces variance",
             ha="center", va="center",
             fontsize=9.5, fontweight="bold", color=VAR_ACCENT, zorder=5)
-    ax.text(74.5, 37.5,
+    ax.text(74.5, 37.5 + DY,
             r"cuts $Z^*\!\to \sigma^2(Y)$",
             ha="center", va="center",
             fontsize=7.0, style="italic", color=VAR_ACCENT, zorder=5)
@@ -313,13 +321,15 @@ def _mini_box(ax, x, y, w, h, label, colour, *, dashed=False, text_size=7.5):
 
 
 def main():
-    fig = plt.figure(figsize=(3.45, 4.55))
+    # ylim tightened: bottom 28→33 (cards shifted up by 3; +2 bottom margin trim),
+    # top 155→152 (title margin trim). figsize aspect retuned to match.
+    fig = plt.figure(figsize=(3.45, 4.27))
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, 100)
-    ax.set_ylim(28, 155)
+    ax.set_ylim(33, 152)
     ax.axis("off")
 
-    ax.text(50.0, 151.0,
+    ax.text(50.0, 149.5,
             "PACT: diagnosing & correcting the dual root",
             ha="center", va="center",
             fontsize=10.0, fontweight="bold", color=TEXT_DARK)
