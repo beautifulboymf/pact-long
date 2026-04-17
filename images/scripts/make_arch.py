@@ -288,15 +288,18 @@ def _scaffold_graph(ax, cx, cy, mode):
     if mode == "X":
         # Feature matrix with meaningful shape: 6 rows × 4 cols reads as
         # "N nodes × d features", tying X to the 6-node graph spine.
-        matrix_icon(ax, cx, cy, w=3.2, h=4.5, rows=6, cols=4,
+        # Size tuned so the icon sits above the $X$ label inside the
+        # half-height (SH_STACK=6) scaffold without collision.
+        matrix_icon(ax, cx, cy, w=2.2, h=3.0, rows=6, cols=4,
                     colour=NEU_DEEP, seed=3)
     elif mode == "p":
         # Positional embedding — teal-shaded mini-graph (node2vec embeds
         # the graph structure, so a graph visualization carries that origin).
+        # Scaled down to fit the half-height stacked scaffold.
         faces = [_mix(BIAS, "#FFFFFF", 0.18 + 0.62 * s) for s in POS_SHADE]
-        mininet(ax, cx, cy, scale=0.75,
-                node_faces=faces, node_edge=BIAS_DK, node_size=0.34,
-                edge_color=BIAS_LT, edge_alpha=0.55, edge_lw=0.6)
+        mininet(ax, cx, cy, scale=0.5,
+                node_faces=faces, node_edge=BIAS_DK, node_size=0.30,
+                edge_color=BIAS_LT, edge_alpha=0.55, edge_lw=0.55)
     elif mode == "M":
         mininet(ax, cx, cy, scale=0.85,
                 node_face=NEU_DEEP, node_edge=INK_SOFT, node_size=0.44,
@@ -398,7 +401,7 @@ def plugin_gpe(ax, x, y):
     mininet(ax, zcx, zcy, scale=0.75,
             node_face=BIAS, node_edge=BIAS_DK, node_size=0.38,
             edge_color=BIAS, edge_alpha=0.70, edge_lw=0.85)
-    ax.text(zcx, zcy - 4.3, "$z$",
+    ax.text(zcx + 3.2, zcy, "$z$",
             ha="center", va="center",
             fontsize=9, fontweight="bold", color=BIAS_DK, zorder=7)
 
@@ -478,44 +481,44 @@ def plugin_vwl(ax, x, y):
     rcx = 74.0                       # right graph column (= new forward D centre)
 
     # w_i — halo-only, transparent inner (outer-ring silhouette)
-    mininet(ax, wcx, y_row, scale=1.30, spread_nodes=True,
+    mininet(ax, wcx, y_row, scale=1.05, spread_nodes=True,
             node_face=(1.0, 1.0, 1.0, 0.0),
-            node_edge=VAR_LT, node_size=0.15,
+            node_edge=VAR_LT, node_size=0.13,
             halo_color=VAR,
-            halo_sizes=[0.34 + 0.62 * w for w in weights],
+            halo_sizes=[0.28 + 0.50 * w for w in weights],
             halo_alpha=0.32,
-            edge_color=VAR_LT, edge_alpha=0.40, edge_lw=0.65)
+            edge_color=VAR_LT, edge_alpha=0.40, edge_lw=0.6)
     ax.text(wcx, label_y, "$w_{i}$",
             ha="center", va="center",
             fontsize=9.5, fontweight="bold", color=VAR_DK, zorder=7)
 
     # integrated — colour from sign(Dᵢ−τ̂ᵢ), size from wᵢ(Dᵢ−τ̂_i)²
-    c_sizes = [0.22 + 0.30 * c for c in contrib]
-    halo_sizes_int = [0.36 + 0.62 * c for c in contrib]
-    mininet(ax, icx, y_row, scale=1.40, spread_nodes=True,
+    c_sizes = [0.18 + 0.25 * c for c in contrib]
+    halo_sizes_int = [0.30 + 0.50 * c for c in contrib]
+    mininet(ax, icx, y_row, scale=1.15, spread_nodes=True,
             node_faces=faces, node_edges=edges_c, node_sizes=c_sizes,
             halo_color=VAR, halo_sizes=halo_sizes_int, halo_alpha=0.32,
-            edge_color=VAR_LT, edge_alpha=0.55, edge_lw=0.75)
+            edge_color=VAR_LT, edge_alpha=0.55, edge_lw=0.7)
     # (intentionally no label here — the central graph is the elementwise
     # product `w_i · (D_i − τ̂_i)²`, which the formula pill at the bottom
     # states explicitly; an extra label here would fight the pill.)
 
     # (D − τ̂) — sign-coloured, no halo
-    sizes_D = [0.22 + 0.22 * m for m in RESID_MAG]
-    mininet(ax, rcx, y_row, scale=1.30, spread_nodes=True,
+    sizes_D = [0.18 + 0.18 * m for m in RESID_MAG]
+    mininet(ax, rcx, y_row, scale=1.05, spread_nodes=True,
             node_faces=faces, node_edges=edges_c, node_sizes=sizes_D,
-            edge_color=NEU_SOFT, edge_alpha=0.40, edge_lw=0.65)
+            edge_color=NEU_SOFT, edge_alpha=0.40, edge_lw=0.6)
     ax.text(rcx, label_y, r"$D{-}\hat\tau$",
             ha="center", va="center",
             fontsize=9.5, fontweight="bold", color=INK, zorder=7)
 
     # 𝓛 disk — TOP-LEFT of the block
     ax.add_patch(mpatches.Circle(
-        (lx, ly), 2.0,
-        facecolor=VAR, edgecolor=VAR_DK, linewidth=1.7, zorder=6))
+        (lx, ly), 1.5,
+        facecolor=VAR, edgecolor=VAR_DK, linewidth=1.5, zorder=6))
     ax.text(lx, ly, r"$\mathcal{L}$",
             ha="center", va="center",
-            fontsize=13, fontweight="bold", color="white", zorder=7)
+            fontsize=11, fontweight="bold", color="white", zorder=7)
 
     # Title — top, shifted to the RIGHT so it doesn't overlay 𝓛
     ax.text(62.0, title_y,
@@ -525,23 +528,23 @@ def plugin_vwl(ax, x, y):
 
     # ============ arrows ============
     # w_i  →  integrated
-    arrow(ax, (wcx + 3.5, y_row), (icx - 4.8, y_row),
-          colour=VAR, lw=1.3, head_size=0.95)
+    arrow(ax, (wcx + 2.9, y_row), (icx - 3.8, y_row),
+          colour=VAR, lw=1.3, head_size=0.9)
     # (D − τ̂)  →  integrated
-    arrow(ax, (rcx - 3.5, y_row), (icx + 4.8, y_row),
-          colour=VAR, lw=1.3, head_size=0.95)
+    arrow(ax, (rcx - 2.9, y_row), (icx + 3.8, y_row),
+          colour=VAR, lw=1.3, head_size=0.9)
 
     # Operator pills sitting on the two horizontal input arrows:
     #   w_i  ·  (D − τ̂)²   →   integrated
     # Background is the block fill (VAR_FILL) so they blend into the block
     # rather than introducing a white hole.
-    mx_mul = (wcx + 3.5 + icx - 4.8) / 2
+    mx_mul = (wcx + 2.9 + icx - 3.8) / 2
     ax.text(mx_mul, y_row, r"$\times$",
             ha="center", va="center",
             fontsize=11, fontweight="bold", color=VAR_DK, zorder=9,
             bbox=dict(boxstyle="circle,pad=0.18", fc=VAR_FILL,
                       ec=VAR_LT, lw=0.8, alpha=0.99))
-    mx_sq = (rcx - 3.5 + icx + 4.8) / 2
+    mx_sq = (rcx - 2.9 + icx + 3.8) / 2
     ax.text(mx_sq, y_row, r"$(\cdot)^{2}$",
             ha="center", va="center",
             fontsize=8, fontweight="bold", color=VAR_DK, zorder=9,
@@ -549,9 +552,9 @@ def plugin_vwl(ax, x, y):
                       ec=VAR_LT, lw=0.8, alpha=0.99))
 
     # integrated  →  𝓛  (single diagonal arrow; Σᵢ label rides on it)
-    int_top_y = y_row + 3.78   # top of integrated graph (scale 1.40)
+    int_top_y = y_row + 3.1    # top of integrated graph (scale 1.15)
     arr_src = (icx - 0.4, int_top_y)
-    arr_dst = (lx + 1.5, ly - 1.5)
+    arr_dst = (lx + 1.3, ly - 1.2)
     arrow(ax, arr_src, arr_dst,
           colour=VAR, lw=1.4, head_size=1.0)
     # Σᵢ label — styled like the × / (·)² operator pills (small, VAR_FILL
@@ -721,9 +724,9 @@ def draw_backward(ax, hooks):
     # pseudo-outcome input directly.
     xD, yD, wD, _ = hooks["D_box"]
     dcx = xD + wD / 2           # forward D centre (= 82.0)
-    # D-τ̂ mini-graph is at y_row=12.0 with scale 1.30; top node centre sits
-    # at y ≈ 15.5 with radius ~0.32.  Land the arrow just above that.
-    d_tau_top_y = 16.0
+    # D-τ̂ mini-graph is at y_row=12.0 with scale 1.05; top node centre sits
+    # at y ≈ 14.8 with radius ~0.3.  Land the arrow just above that.
+    d_tau_top_y = 15.3
     ax.annotate(
         "",
         xy=(dcx, d_tau_top_y),
