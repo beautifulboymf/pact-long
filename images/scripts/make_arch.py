@@ -51,7 +51,7 @@ mpl.rcParams.update(
         "pdf.fonttype": 3,
         "ps.fonttype": 3,
         "savefig.bbox": "tight",
-        "savefig.pad_inches": 0.08,
+        "savefig.pad_inches": 0.02,
     }
 )
 
@@ -592,11 +592,11 @@ def draw_sidebar(ax):
             ha="center", va="center",
             fontsize=10.5, fontweight="bold", color=VAR,
             rotation=90, rotation_mode="anchor")
-    ax.plot([6.6, 6.6], [3, 53], color=DIVIDER, lw=0.5, zorder=1)
+    ax.plot([6.6, 6.6], [4.3, 52.5], color=DIVIDER, lw=0.5, zorder=1)
 
 
 def draw_divider(ax):
-    ax.plot([8.5, 86.5], [DIVIDER_Y, DIVIDER_Y],
+    ax.plot([8.5, 78.5], [DIVIDER_Y, DIVIDER_Y],
             color=DIVIDER, lw=0.55, linestyle=(0, (5, 3)), zorder=1)
 
 
@@ -773,10 +773,14 @@ def draw_backward(ax, hooks):
 
 
 def main():
-    fig = plt.figure(figsize=(8.4, 5.1), facecolor=BG)
+    # Figure geometry: axes limits clamped tightly to the actual drawn
+    # content so that `savefig.bbox="tight"` is not fighting a mostly
+    # empty canvas.  Figsize aspect matches content aspect → no stretch,
+    # no padding bands.
+    fig = plt.figure(figsize=(8.0, 5.15), facecolor=BG)
     ax = fig.add_axes([0, 0, 1, 1])
-    ax.set_xlim(0, 90)
-    ax.set_ylim(0, 62)
+    ax.set_xlim(2.0, 78.8)   # covers sidebar text (x≈2.4) → rightmost block (x≈78.4)
+    ax.set_ylim(3.8, 53.0)   # covers VWL bottom (y≈4.3) → legend top (y≈52.3)
     ax.axis("off")
     ax.set_facecolor(BG)
 
